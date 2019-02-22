@@ -1598,13 +1598,19 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                         printf("        UID :       \t'");
                     }
                     
+                    std::string s = "";
+                    std::ostringstream oss;
+                    oss << std::setfill('0');
+                    
                     for(i = 0x00; i < TagInfo.uid_length; i++)
                     {
                         printf("%02X ", (unsigned char) TagInfo.uid[i]);
+                        oss << std::setw(2) << std::hex << static_cast< int >( TagInfo.uid[i] );
                     }
                     printf("'\n");
+                    s.assign( oss.str() );
                     
-                    pollCB.Call(pollEnv.Global(), { Napi::String::New(pollEnv, HexToString(TagInfo.uid)) });
+                    pollCB.Call(pollEnv.Global(), { Napi::String::New(pollEnv, s) });
                 }
                 res = nfcTag_isNdef(TagInfo.handle, &NDEFinfo);
                 if(0x01 == res)
