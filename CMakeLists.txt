@@ -11,8 +11,13 @@ add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 
 # Include N-API wrappers
-target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/node_modules/node-addon-api")
-target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/node_modules/node-addon-api/src")
+if (EXISTS "${CMAKE_SOURCE_DIR}/node_modules/")
+  target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/node_modules/node-addon-api")
+  target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/node_modules/node-addon-api/src")
+else()
+  target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/../node_modules/node-addon-api")
+  target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/../node_modules/node-addon-api/src")
+endif()
 
 # Essential include files to build a node addon,
 # You should add this line in every CMake.js based project
