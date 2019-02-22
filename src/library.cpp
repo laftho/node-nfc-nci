@@ -1613,7 +1613,10 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                     {
                         printf("%02X ", (unsigned char) TagInfo.uid[i]);
                         oss << std::setw(2) << std::hex << static_cast< int >( TagInfo.uid[i] );
-                        oss << ":";
+                        
+                        if (i < TagInfo.uid_length - 1) {
+                            oss << ":";
+                        }
                     }
                     printf("'\n");
                     s.assign( oss.str() );
