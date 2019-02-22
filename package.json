@@ -1,6 +1,6 @@
 {
   "name": "node-nfc-nci",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "NXP NFC NCI Node wrapper",
   "repository": "https://github.com/laftho/node-nfc-nci",
   "main": "index.js",
