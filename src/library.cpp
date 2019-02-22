@@ -1524,9 +1524,12 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
             DevTypeBck = g_Dev_Type;
             if(eDevType_TAG == g_Dev_Type)
             {
+                Napi::Object tagInfo = Napi::Object::New(pollEnv);
+                
                 memcpy(&TagInfo, &g_TagInfo, sizeof(nfc_tag_info_t));
                 framework_UnlockMutex(g_devLock);
                 printf("        Type : ");
+                tagInfo.Set("technology", TagInfo.technology);
                 switch (TagInfo.technology)
                 {
                     case TARGET_TYPE_UNKNOWN:
@@ -1585,17 +1588,21 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                 /*32 is max UID len (Kovio tags)*/
                 if((0x00 != TagInfo.uid_length) && (32 >= TagInfo.uid_length))
                 {
+                    tagInfo.Set("uid_length", TagInfo.uid_length);
                     if(4 == TagInfo.uid_length || 7 == TagInfo.uid_length || 10 == TagInfo.uid_length)
                     {
                         printf("        NFCID1 :    \t'");
+                        tagInfo.Set("uid_type", "NFCID1");
                     }
                     else if(8 == TagInfo.uid_length)
                     {
                         printf("        NFCID2 :    \t'");
+                        tagInfo.Set("uid_type", "NFCID2");
                     }
                     else
                     {
                         printf("        UID :       \t'");
+                        tagInfo.Set("uid_type", "UID");
                     }
                     
                     std::string s = "";
@@ -1606,11 +1613,15 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                     {
                         printf("%02X ", (unsigned char) TagInfo.uid[i]);
                         oss << std::setw(2) << std::hex << static_cast< int >( TagInfo.uid[i] );
+                        
+                        if (i % 2 == 0) {
+                            oss << ":";
+                        }
                     }
                     printf("'\n");
                     s.assign( oss.str() );
                     
-                    pollCB.Call(pollEnv.Global(), { Napi::String::New(pollEnv, s) });
+                    tagInfo.Set("uid", s);
                 }
                 res = nfcTag_isNdef(TagInfo.handle, &NDEFinfo);
                 if(0x01 == res)
@@ -1737,6 +1748,8 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                     }
                 }
                  framework_LockMutex(g_devLock);
+                 
+                 pollCB.Call(pollEnv.Global(), { tagInfo });
             }
             else if(eDevType_P2P == g_Dev_Type)/*P2P Detected*/
             {
