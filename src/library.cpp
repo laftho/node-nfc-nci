@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include "linux_nfc_api.h"
 // #include "tools.h"
 #include <stdint.h>
 
@@ -32,6 +31,16 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <iostream>
+#include <iomanip>
+
+template <typename T>
+std::string HexToString(T uval)
+{
+    std::stringstream ss;
+    ss << "0x" << std::setw(sizeof(uval) * 2) << std::setfill('0') << std::hex << +uval;
+    return ss.str();
+}
 
 typedef enum _eResult
 {
@@ -1595,7 +1604,7 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                     }
                     printf("'\n");
                     
-                    pollCB.Call(pollEnv.Global(), { Napi::String::New(pollEnv, TagInfo.uid) });
+                    pollCB.Call(pollEnv.Global(), { Napi::String::New(pollEnv, HexToString(TagInfo.uid)) });
                 }
                 res = nfcTag_isNdef(TagInfo.handle, &NDEFinfo);
                 if(0x01 == res)
