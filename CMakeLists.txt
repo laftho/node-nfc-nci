@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 project(node_nfc_nci)
 
 # Build a shared library named after the project from the files in `src/`
-file(GLOB SOURCE_FILES "src/*.cpp" "src/*.c" "src/*.h")
+file(GLOB SOURCE_FILES "src/*.cpp" "src/*.h")
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 
 # Gives our library file a .node extension without any "lib" prefix

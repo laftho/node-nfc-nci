@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-// #include "tools.h"
+#include "tools.h"
 #include <stdint.h>
 
 #include <pthread.h>
@@ -34,759 +34,35 @@
 #include <iostream>
 #include <iomanip>
 
-template <typename T>
-std::string HexToString(T uval)
-{
-    std::stringstream ss;
-    ss << "0x" << std::setw(sizeof(uval) * 2) << std::setfill('0') << std::hex << +uval;
-    return ss.str();
-}
-
-typedef enum _eResult
-{
-	FRAMEWORK_SUCCESS,
-	FRAMEWORK_FAILED
-}eResult;
-
-
-/**
- * Create a thread using the given function in parameters
- * @param threadHandle Obfuscated thread handle allocated by this function.
- * @param threadedFunc function to start in new thread. ( void* myFunc(void* ctx) )
- * @param ctx Parameters given to threadedFunc.
- * @return SUCCESS if no error.
- */
-eResult framework_CreateThread(void** threadHandle,void *(*threadedFunc)(void*),void *ctx);
-/**
- * Wait until the given thread finish to run.
- * @param threadHandle Obfuscated thread handle allocated by framework_CreateThread()
- */
-void framework_JoinThread(void* threadHandle);
-/**
- * Delete the given thread. NOTE : framework_JoinThread() will be called before this function. So
- * the Thread is already stopped.
- * @param threadHandle Obfuscated thread handle allocated by framework_CreateThread()
- */
-void framework_DeleteThread(void* threadHandle);
-/**
- * Return the calling thread ID.
- * @return thread id.
- */
-void* framework_GetCurrentThreadId();
-/**
- * Get the thread id of the given thread handle.
- * @param threadHandle Obfuscated thread handle allocated by framework_CreateThread()
- * @return thread id.
- */
-void* framework_GetThreadId(void* threadHandle);
-
-
-/**
- * Create a mutex object. To gain performances, do not implement this function using interprocess
- * lock mechanism such as Semaphore.
- * @param mutexHandle Obfuscated mutex handle allocated by this function.
- * @return SUCCESS if no error.
- */
-eResult framework_CreateMutex(void** mutexHandle);
-/**
- * Lock the mutex.
- * @param mutexHandle Obfuscated mutex handle allocated by framework_CreateMutex().
- */
-void framework_LockMutex(void* mutexHandle);
-/**
- * Unlock the mutex
- * @param mutexHandle Obfuscated mutex handle allocated by framework_CreateMutex().
- */
-void framework_UnlockMutex(void* mutexHandle);
-/**
- * Block the current thread until wake up by framework_NotifyMutex(). 
- * The mutex need to be locked before blocking the thread. (needLock parameter can be used)
- * @param mutexHandle Obfuscated mutex handle allocated by framework_CreateMutex().
- * @param needLock Indicate if the mutex need to be locked internaly or not. This avoid to call lock();wait();unlock();
- */
-void framework_WaitMutex(void* mutexHandle,uint8_t needLock);
-/**
- * Wake up a thread blocked by the mutex. The mutex must be locked before waking up another thread.
- * The mutex need to be locked before waking up a thread. (needLock parameter can be used)
- * @param mutexHandle Obfuscated mutex handle allocated by framework_CreateMutex().
- * @param needLock Indicate if the mutex need to be locked internaly or not. This avoid to call lock();wait();unlock();
- */
-void framework_NotifyMutex(void* mutexHandle,uint8_t needLock);
-/**
- * Delete the mutex. If the mutex is locked, any locked thread will be unlocked.
- * @param mutexHandle Obfuscated mutex handle allocated by framework_CreateMutex().
- */
-void framework_DeleteMutex(void* mutexHandle);
-
-/**
- * Cause the calling thread to sleep until ms milliseconds elapsed.
- * @param ms Milliseconds to wait until wakeup.
- */
-void framework_MilliSleep(uint32_t ms);
-
-
-
-void* framework_AllocMem(size_t size);
-void  framework_FreeMem(void *ptr);
-
-
-/****************** Thread ****************************/
-
-
-typedef struct tLinuxThread
-{
-	pthread_t thread;
-	void* ctx;
-	void* (*threadedFunc)(void *);
-	void* mutexCanDelete;
-}tLinuxThread_t;
-
-void* thread_object_func(void* obj)
-{
-	tLinuxThread_t *linuxThread = (tLinuxThread_t *)obj;
-	void *res = NULL;
-	framework_LockMutex(linuxThread->mutexCanDelete);
-	res = linuxThread->threadedFunc(linuxThread->ctx);
-	framework_UnlockMutex(linuxThread->mutexCanDelete);
-
-	return res;
-}
-
-
-eResult framework_CreateThread(void** threadHandle, void * (* threadedFunc)(void *) , void * ctx)
-{
-	tLinuxThread_t *linuxThread = (tLinuxThread_t *)framework_AllocMem(sizeof(tLinuxThread_t));
-	
-	linuxThread->ctx = ctx;
-	linuxThread->threadedFunc = threadedFunc;
-	framework_CreateMutex(&(linuxThread->mutexCanDelete));
-	
-	if (pthread_create(&(linuxThread->thread), NULL, thread_object_func, linuxThread))
-	{
-		printf("Cannot create Thread\n");
-		framework_DeleteMutex(linuxThread->mutexCanDelete);
-		framework_FreeMem(linuxThread);
-		
-		return FRAMEWORK_FAILED;
-	}
-	pthread_detach(linuxThread->thread);
-	
-	*threadHandle = linuxThread;
-	
-	return FRAMEWORK_SUCCESS;
-}
-
-void framework_JoinThread(void * threadHandle)
-{
-	tLinuxThread_t *linuxThread = (tLinuxThread_t*)threadHandle;
-	if (pthread_self() != linuxThread->thread)
-	{
-		// Will cause block if thread still running !!!
-		framework_LockMutex(linuxThread->mutexCanDelete);
-		framework_UnlockMutex(linuxThread->mutexCanDelete);
-		// Thread now just ends up !
-	}
-}
-
-
-void framework_DeleteThread(void * threadHandle)
-{
-	tLinuxThread_t *linuxThread = (tLinuxThread_t*)threadHandle;
-	framework_DeleteMutex(linuxThread->mutexCanDelete);
-	framework_FreeMem(linuxThread);
-}
-
-void * framework_GetCurrentThreadId()
-{
-	return (void*)pthread_self();
-}
-
-void * framework_GetThreadId(void * threadHandle)
-{
-	tLinuxThread_t *linuxThread = (tLinuxThread_t*)threadHandle;
-	return (void*)linuxThread->thread;
-}
-
-void framework_MilliSleep(uint32_t ms)
-{
-	usleep(1000*ms);
-}
-
-/****************** Mutex ****************************/
-
-typedef struct tLinuxMutex
-{
-	pthread_mutex_t *lock;
-	pthread_cond_t  *cond;
-}tLinuxMutex_t;
-
-eResult framework_CreateMutex(void ** mutexHandle)
-{
-	tLinuxMutex_t *mutex = (tLinuxMutex_t *)framework_AllocMem(sizeof(tLinuxMutex_t));
-	
-	mutex->lock = (pthread_mutex_t*)framework_AllocMem(sizeof(pthread_mutex_t));
-	mutex->cond = (pthread_cond_t*)framework_AllocMem(sizeof(pthread_cond_t));
-	
-	pthread_mutex_init(mutex->lock,NULL);
-	pthread_cond_init(mutex->cond,NULL);
-	
-	*mutexHandle = mutex;
-	
-	return FRAMEWORK_SUCCESS;
-}
-
-void framework_LockMutex(void * mutexHandle)
-{
-	tLinuxMutex_t *mutex = (tLinuxMutex_t*)mutexHandle;
-	
-	int res = pthread_mutex_lock(mutex->lock);
-	if (res)
-	{
-		printf("lock() failed %s\n",strerror (errno));
-	}
-}
-
-void framework_UnlockMutex(void * mutexHandle)
-{
-	tLinuxMutex_t *mutex = (tLinuxMutex_t*)mutexHandle;
-	int res = pthread_mutex_unlock(mutex->lock);
-	if (res)
-	{
-		printf("unlock() failed %s\n",strerror (errno));
-	}
-}
-
-void framework_WaitMutex(void * mutexHandle, uint8_t needLock)
-{
-	tLinuxMutex_t *mutex = (tLinuxMutex_t*)mutexHandle;
-	
-	if (needLock)
-	{
-		framework_LockMutex(mutexHandle);
-	}
-
-	pthread_cond_wait(mutex->cond,mutex->lock);
-	
-	if (needLock)
-	{
-		framework_UnlockMutex(mutexHandle);
-	}
-	
-}
-
-void framework_NotifyMutex(void * mutexHandle, uint8_t needLock)
-{
-	tLinuxMutex_t *mutex = (tLinuxMutex_t*)mutexHandle;
-	
-	if (needLock)
-	{
-		framework_LockMutex(mutexHandle);
-	}
-
-	pthread_cond_broadcast(mutex->cond);
-	
-	if (needLock)
-	{
-		framework_UnlockMutex(mutexHandle);
-	}
-}
-
-void framework_DeleteMutex(void * mutexHandle)
-{
-	tLinuxMutex_t *mutex = (tLinuxMutex_t*)mutexHandle;
-	
-	pthread_mutex_destroy(mutex->lock);
-	pthread_cond_destroy(mutex->cond);
-	
-	framework_FreeMem(mutex);
-}
-
-/****************** Memory Mgmt ****************************/
-
-
-typedef struct sMemInfo
-{
-	uint32_t magic;
-	size_t size;
-} sMemInfo_t;
-
-typedef struct sMemInfoEnd
-{
-	uint32_t magicEnd;
-} sMemInfoEnd_t;
-
-
-void* framework_AllocMem(size_t size)
-{
-	sMemInfo_t *info = NULL;
-	sMemInfoEnd_t *infoEnd = NULL;
-	uint8_t * pMem = (uint8_t *) malloc(size+sizeof(sMemInfo_t)+sizeof(sMemInfoEnd_t));
-	info = (sMemInfo_t*)pMem;
-	
-	info->magic = 0xDEADC0DE;
-	info->size  = size;
-
-	pMem = pMem+sizeof(sMemInfo_t);
-
-	memset(pMem,0xAB,size);
-
-	infoEnd = (sMemInfoEnd_t*)(pMem+size);
-
-	infoEnd->magicEnd = 0xDEADC0DE;
-	return pMem;
-}
-
-void framework_FreeMem(void *ptr)
-{
-	if(NULL !=  ptr)
-	{
-		sMemInfoEnd_t *infoEnd = NULL;
-		uint8_t *memInfo = (uint8_t*)ptr;
-		sMemInfo_t *info = (sMemInfo_t*)(memInfo - sizeof(sMemInfo_t));
-
-		infoEnd = (sMemInfoEnd_t*)(memInfo+info->size);
-
-		if ((info->magic != 0xDEADC0DE)||(infoEnd->magicEnd != 0xDEADC0DE))
-		{
-			// Call Debugger
-			*(int *)(uintptr_t)0xbbadbeef = 0;
-		}else
-		{
-			memset(info,0x14,info->size+sizeof(sMemInfo_t)+sizeof(sMemInfoEnd_t));
-		}
-			
-		free(info);
-	}
-}
-
-
+#include "state.h"
+#include "deviceinterface.h"
 
 
 Napi::Env pollEnv = NULL;
 Napi::Function pollCB;
 
-typedef enum eDevState
-{
-    eDevState_NONE,
-    eDevState_WAIT_ARRIVAL,
-    eDevState_PRESENT,
-    eDevState_WAIT_DEPARTURE,
-    eDevState_DEPARTED,
-    eDevState_EXIT
-}eDevState;
-typedef enum eSnepClientState
-{
-    eSnepClientState_WAIT_OFF,
-    eSnepClientState_OFF,
-    eSnepClientState_WAIT_READY,
-    eSnepClientState_READY,
-    eSnepClientState_EXIT
-}eSnepClientState;
-typedef enum eHCEState
-{
-    eHCEState_NONE,
-    eHCEState_WAIT_DATA,
-    eHCEState_DATA_RECEIVED,
-    eHCEState_EXIT
-}eHCEState;
-typedef enum eDevType
-{
-    eDevType_NONE,
-    eDevType_TAG,
-    eDevType_P2P,
-    eDevType_READER
-}eDevType;
-typedef enum T4T_NDEF_EMU_state_t
-{
-    Ready,
-    NDEF_Application_Selected,
-    CC_Selected,
-    NDEF_Selected
-} T4T_NDEF_EMU_state_t;
-static void* g_ThreadHandle = NULL;
-static void* g_devLock = NULL;
-static void* g_SnepClientLock = NULL;
-static void* g_HCELock = NULL;
-static eDevState g_DevState = eDevState_NONE;
-static eDevType g_Dev_Type = eDevType_NONE;
-static eSnepClientState g_SnepClientState = eSnepClientState_OFF;
-static eHCEState g_HCEState = eHCEState_NONE;
-static nfc_tag_info_t g_TagInfo;
-static nfcTagCallback_t g_TagCB;
-static nfcHostCardEmulationCallback_t g_HceCB;
-static nfcSnepServerCallback_t g_SnepServerCB;
-static nfcSnepClientCallback_t g_SnepClientCB;
-unsigned char *HCE_data = NULL;
-unsigned int HCE_dataLenght = 0x00;
-const unsigned char T4T_NDEF_EMU_APP_Select[] = {0x00,0xA4,0x04,0x00,0x07,0xD2,0x76,0x00,0x00,0x85,0x01,0x01};
-const unsigned char T4T_NDEF_EMU_CC[] = {0x00, 0x0F, 0x20, 0x00, 0xFF, 0x00, 0xFF, 0x04, 0x06, 0xE1, 0x04, 0x00, 0xFF, 0x00, 0xFF};
-const unsigned char T4T_NDEF_EMU_CC_Select[] = {0x00,0xA4,0x00,0x0C,0x02,0xE1,0x03};
-const unsigned char T4T_NDEF_EMU_NDEF_Select[] = {0x00,0xA4,0x00,0x0C,0x02,0xE1,0x04};
-const unsigned char T4T_NDEF_EMU_Read[] = {0x00,0xB0};
-const unsigned char T4T_NDEF_EMU_OK[] = {0x90, 0x00};
-const unsigned char T4T_NDEF_EMU_NOK[] = {0x6A, 0x82};
-unsigned char *pT4T_NdefRecord = NULL;
-unsigned short T4T_NdefRecord_size = 0;
+Napi::Env errorEnv = NULL;
+Napi::Function errorCB;
 
-typedef void T4T_NDEF_EMU_Callback_t (unsigned char*, unsigned short);
-static T4T_NDEF_EMU_state_t eT4T_NDEF_EMU_State = Ready;
-static T4T_NDEF_EMU_Callback_t *pT4T_NDEF_EMU_PushCb = NULL;
+void onError(char* message) {
+  if(errorEnv != NULL) {  
+    errorCB.Call(errorEnv.Global(), { Napi::String::New(errorEnv, message) });
+  }
+}
+
+
+
+
+
+
+
+
 void help(int mode);
 int InitEnv();
 int LookForTag(char** args, int args_len, char* tag, char** data, int format);
-/********************************** HCE **********************************/
-static void T4T_NDEF_EMU_FillRsp (unsigned char *pRsp, unsigned short offset, unsigned char length)
-{
-    if (offset == 0)
-    {
-        pRsp[0] = (T4T_NdefRecord_size & 0xFF00) >> 8;
-        pRsp[1] = (T4T_NdefRecord_size & 0x00FF);
-        memcpy(&pRsp[2], &pT4T_NdefRecord[0], length-2);
-    }
-    else if (offset == 1)
-    {
-        pRsp[0] = (T4T_NdefRecord_size & 0x00FF);
-        memcpy(&pRsp[1], &pT4T_NdefRecord[0], length-1);
-    }
-    else
-    {
-        memcpy(pRsp, &pT4T_NdefRecord[offset-2], length);
-    }
-    /* Did we reached the end of NDEF record ?*/
-    if ((offset + length) >= (T4T_NdefRecord_size + 2))
-    {
-        /* Notify application of the NDEF send */
-        if(pT4T_NDEF_EMU_PushCb != NULL) pT4T_NDEF_EMU_PushCb(pT4T_NdefRecord, T4T_NdefRecord_size);
-    }
-}
-void T4T_NDEF_EMU_SetRecord(unsigned char *pRecord, unsigned short Record_size, T4T_NDEF_EMU_Callback_t *cb)
-{
-    pT4T_NdefRecord = pRecord;
-    T4T_NdefRecord_size = Record_size;
-    pT4T_NDEF_EMU_PushCb =  cb;
-}
-void T4T_NDEF_EMU_Reset(void)
-{
-    eT4T_NDEF_EMU_State = Ready;
-}
-void T4T_NDEF_EMU_Next(unsigned char *pCmd, unsigned short Cmd_size, unsigned char *pRsp, unsigned short *pRsp_size)
-{
-    unsigned char eStatus = 0x00;
-    if (!memcmp(pCmd, T4T_NDEF_EMU_APP_Select, sizeof(T4T_NDEF_EMU_APP_Select)))
-    {
-        *pRsp_size = 0;
-        eStatus = 0x01;
-        eT4T_NDEF_EMU_State = NDEF_Application_Selected;
-    }
-    else if (!memcmp(pCmd, T4T_NDEF_EMU_CC_Select, sizeof(T4T_NDEF_EMU_CC_Select)))
-    {
-        if(eT4T_NDEF_EMU_State == NDEF_Application_Selected)
-        {
-            *pRsp_size = 0;
-            eStatus = 0x01;
-            eT4T_NDEF_EMU_State = CC_Selected;
-        }
-    }
-    else if (!memcmp(pCmd, T4T_NDEF_EMU_NDEF_Select, sizeof(T4T_NDEF_EMU_NDEF_Select)))
-    {
-        *pRsp_size = 0;
-        eStatus = 0x01;
-        eT4T_NDEF_EMU_State = NDEF_Selected;
-    }
-    else if (!memcmp(pCmd, T4T_NDEF_EMU_Read, sizeof(T4T_NDEF_EMU_Read)))
-    {
-        if(eT4T_NDEF_EMU_State == CC_Selected)
-        {
-            memcpy(pRsp, T4T_NDEF_EMU_CC, sizeof(T4T_NDEF_EMU_CC));
-            *pRsp_size = sizeof(T4T_NDEF_EMU_CC);
-            eStatus = 0x01;
-        }
-        else if (eT4T_NDEF_EMU_State == NDEF_Selected)
-        {
-            unsigned short offset = (pCmd[2] << 8) + pCmd[3];
-            unsigned char length = pCmd[4];
-            if(length <= (T4T_NdefRecord_size + offset + 2))
-            {
-                T4T_NDEF_EMU_FillRsp(pRsp, offset, length);
-                *pRsp_size = length;
-                eStatus = 0x01;
-            }
-        }
-    }
-    if (eStatus == 0x01)
-    {
-        memcpy(&pRsp[*pRsp_size], T4T_NDEF_EMU_OK, sizeof(T4T_NDEF_EMU_OK));
-        *pRsp_size += sizeof(T4T_NDEF_EMU_OK);
-    } 
-    else
-    {
-        memcpy(pRsp, T4T_NDEF_EMU_NOK, sizeof(T4T_NDEF_EMU_NOK));
-        *pRsp_size = sizeof(T4T_NDEF_EMU_NOK);
-        T4T_NDEF_EMU_Reset();
-    }
-}
-/********************************** CallBack **********************************/
-void onDataReceived(unsigned char *data, unsigned int data_length)
-{
-    framework_LockMutex(g_HCELock);
-    
-    HCE_dataLenght = data_length;
-    HCE_data = (unsigned char*)malloc(HCE_dataLenght * sizeof(unsigned char));
-    memcpy(HCE_data, data, data_length);
-    
-    if(eHCEState_NONE == g_HCEState)
-    {
-        g_HCEState = eHCEState_DATA_RECEIVED;
-    }
-    else if (eHCEState_WAIT_DATA == g_HCEState)
-    {
-        g_HCEState = eHCEState_DATA_RECEIVED;
-        framework_NotifyMutex(g_HCELock, 0);
-    }
-    
-    framework_UnlockMutex(g_HCELock);
-}
-void onHostCardEmulationActivated(unsigned char mode)
-{
-    framework_LockMutex(g_devLock);
-    
-    T4T_NDEF_EMU_Reset();
-    
-    if(eDevState_WAIT_ARRIVAL == g_DevState)
-    {
-        printf("\tNFC Reader Found, mode=0x%.2x\n\n", mode);
-        g_DevState = eDevState_PRESENT;
-        g_Dev_Type = eDevType_READER;
-        framework_NotifyMutex(g_devLock, 0);
-    }
-    else if(eDevState_WAIT_DEPARTURE == g_DevState)
-    {
-        g_DevState = eDevState_PRESENT;
-        g_Dev_Type = eDevType_READER;
-        framework_NotifyMutex(g_devLock, 0);
-    }
-    else if(eDevState_EXIT == g_DevState)
-    {
-        g_DevState = eDevState_DEPARTED;
-        g_Dev_Type = eDevType_NONE;
-        framework_NotifyMutex(g_devLock, 0);
-    }
-    else
-    {
-        g_DevState = eDevState_PRESENT;
-        g_Dev_Type = eDevType_READER;
-    }
-    framework_UnlockMutex(g_devLock);
-}
-void onHostCardEmulationDeactivated()
-{
-    framework_LockMutex(g_devLock);
-    
-    if(eDevState_WAIT_DEPARTURE == g_DevState)
-    {
-        printf("\tNFC Reader Lost\n\n");
-        g_DevState = eDevState_DEPARTED;
-        g_Dev_Type = eDevType_NONE;
-        framework_NotifyMutex(g_devLock, 0);
-    }
-    else if(eDevState_PRESENT == g_DevState)
-    {
-        printf("\tNFC Reader Lost\n\n");
-        g_DevState = eDevState_DEPARTED;
-        g_Dev_Type = eDevType_NONE;
-    }
-    else if(eDevState_WAIT_ARRIVAL == g_DevState)
-    {
-    }
-    else if(eDevState_EXIT == g_DevState)
-    {
-    }
-    else
-    {
-        g_DevState = eDevState_DEPARTED;
-        g_Dev_Type = eDevType_NONE;
-    }
-    framework_UnlockMutex(g_devLock);
-    
-    framework_LockMutex(g_HCELock);
-    if(eHCEState_WAIT_DATA == g_HCEState)
-    {
-        g_HCEState = eHCEState_NONE;
-        framework_NotifyMutex(g_HCELock, 0x00);
-    }
-    else if(eHCEState_EXIT == g_HCEState)
-    {
-        
-    }
-    else
-    {
-        g_HCEState = eHCEState_NONE;
-    }
-    framework_UnlockMutex(g_HCELock);
-}
- 
-void onTagArrival(nfc_tag_info_t *pTagInfo)
-{
-    framework_LockMutex(g_devLock);
-    
-    if(eDevState_WAIT_ARRIVAL == g_DevState)
-    {    
-        printf("\tNFC Tag Found\n\n");
-        memcpy(&g_TagInfo, pTagInfo, sizeof(nfc_tag_info_t));
-        g_DevState = eDevState_PRESENT;
-        g_Dev_Type = eDevType_TAG;
-        framework_NotifyMutex(g_devLock, 0);
-    }
-    else if(eDevState_WAIT_DEPARTURE == g_DevState)
-    {    
-        memcpy(&g_TagInfo, pTagInfo, sizeof(nfc_tag_info_t));
-        g_DevState = eDevState_PRESENT;
-        g_Dev_Type = eDevType_TAG;
-        framework_NotifyMutex(g_devLock, 0);
-    }
-    else if(eDevState_EXIT == g_DevState)
-    {
-        g_DevState = eDevState_DEPARTED;
-        g_Dev_Type = eDevType_NONE;
-        framework_NotifyMutex(g_devLock, 0);
-    }
-    else
-    {
-        g_DevState = eDevState_PRESENT;
-        g_Dev_Type = eDevType_TAG;
-    }
-    framework_UnlockMutex(g_devLock);
-}
-void onTagDeparture(void)
-{    
-    framework_LockMutex(g_devLock);
-    
-    
-    if(eDevState_WAIT_DEPARTURE == g_DevState)
-    {
-        printf("\tNFC Tag Lost\n\n");
-        g_DevState = eDevState_DEPARTED;
-        g_Dev_Type = eDevType_NONE;
-        framework_NotifyMutex(g_devLock, 0);
-    }
-    else if(eDevState_WAIT_ARRIVAL == g_DevState)
-    {
-    }    
-    else if(eDevState_EXIT == g_DevState)
-    {
-    }
-    else
-    {
-        g_DevState = eDevState_DEPARTED;
-        g_Dev_Type = eDevType_NONE;
-    }
-    framework_UnlockMutex(g_devLock);
-}
-void onDeviceArrival (void)
-{
-    framework_LockMutex(g_devLock);
-    
-    switch(g_DevState)
-    {
-        case eDevState_WAIT_DEPARTURE:
-        {
-            g_DevState = eDevState_PRESENT;
-            g_Dev_Type = eDevType_P2P;
-            framework_NotifyMutex(g_devLock, 0);
-        } break;
-        case eDevState_EXIT:
-        {
-            g_Dev_Type = eDevType_P2P;
-        } break;
-        case eDevState_NONE:
-        {
-            g_DevState = eDevState_PRESENT;
-            g_Dev_Type = eDevType_P2P;
-        } break;
-        case eDevState_WAIT_ARRIVAL:
-        {
-            g_DevState = eDevState_PRESENT;
-            g_Dev_Type = eDevType_P2P;
-            framework_NotifyMutex(g_devLock, 0);
-        } break;
-        case eDevState_PRESENT:
-        {
-            g_Dev_Type = eDevType_P2P;
-        } break;
-        case eDevState_DEPARTED:
-        {
-            g_Dev_Type = eDevType_P2P;
-            g_DevState = eDevState_PRESENT;
-        } break;
-    }
-    
-    framework_UnlockMutex(g_devLock);
-}
 
-void onDeviceDeparture (void)
-{
-    framework_LockMutex(g_devLock);
-    
-    switch(g_DevState)
-    {
-        case eDevState_WAIT_DEPARTURE:
-        {
-            g_DevState = eDevState_DEPARTED;
-            g_Dev_Type = eDevType_NONE;
-            framework_NotifyMutex(g_devLock, 0);
-        } break;
-        case eDevState_EXIT:
-        {
-            g_Dev_Type = eDevType_NONE;
-        } break;
-        case eDevState_NONE:
-        {
-            g_Dev_Type = eDevType_NONE;
-        } break;
-        case eDevState_WAIT_ARRIVAL:
-        {
-            g_Dev_Type = eDevType_NONE;
-        } break;
-        case eDevState_PRESENT:
-        {
-            g_Dev_Type = eDevType_NONE;
-            g_DevState = eDevState_DEPARTED;
-        } break;
-        case eDevState_DEPARTED:
-        {
-            g_Dev_Type = eDevType_NONE;
-        } break;
-    }
-    framework_UnlockMutex(g_devLock);
-    
-    framework_LockMutex(g_SnepClientLock);
-    
-    switch(g_SnepClientState)
-    {
-        case eSnepClientState_WAIT_OFF:
-        {
-            g_SnepClientState = eSnepClientState_OFF;
-            framework_NotifyMutex(g_SnepClientLock, 0);
-        } break;
-        case eSnepClientState_OFF:
-        {
-        } break;
-        case eSnepClientState_WAIT_READY:
-        {
-            g_SnepClientState = eSnepClientState_OFF;
-            framework_NotifyMutex(g_SnepClientLock, 0);
-        } break;
-        case eSnepClientState_READY:
-        {
-            g_SnepClientState = eSnepClientState_OFF;
-        } break;
-        case eSnepClientState_EXIT:
-        {
-        } break;
-    }
-    
-    framework_UnlockMutex(g_SnepClientLock);
-}
+
+
 
 void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned char* ndefRaw, unsigned int ndefRawLen)
 {
@@ -1165,162 +441,31 @@ void PrintNDEFContent(nfc_tag_info_t* TagInfo, ndef_info_t* NDEFinfo, unsigned c
     }
 }
 
+
 void onMessageReceived(unsigned char *message, unsigned int length)
 {
     unsigned int i = 0x00;
-    printf("\n\t\tNDEF Message Received : \n");
+    // printf("\n\t\tNDEF Message Received : \n"); //TODO fixme
     PrintNDEFContent(NULL, NULL, message, length);
-}
-void onSnepClientReady()
-{
-    framework_LockMutex(g_devLock);
-    
-    switch(g_DevState)
-    {
-        case eDevState_WAIT_DEPARTURE:
-        {
-            g_DevState = eDevState_PRESENT;
-            g_Dev_Type = eDevType_P2P;
-            framework_NotifyMutex(g_devLock, 0);
-        } break;
-        case eDevState_EXIT:
-        {
-            g_Dev_Type = eDevType_P2P;
-        } break;
-        case eDevState_NONE:
-        {
-            g_DevState = eDevState_PRESENT;
-            g_Dev_Type = eDevType_P2P;
-        } break;
-        case eDevState_WAIT_ARRIVAL:
-        {
-            g_DevState = eDevState_PRESENT;
-            g_Dev_Type = eDevType_P2P;
-            framework_NotifyMutex(g_devLock, 0);
-        } break;
-        case eDevState_PRESENT:
-        {
-            g_Dev_Type = eDevType_P2P;
-        } break;
-        case eDevState_DEPARTED:
-        {
-            g_Dev_Type = eDevType_P2P;
-            g_DevState = eDevState_PRESENT;
-        } break;
-    }
-    framework_UnlockMutex(g_devLock);
-    
-    framework_LockMutex(g_SnepClientLock);
-    
-    switch(g_SnepClientState)
-    {
-        case eSnepClientState_WAIT_OFF:
-        {
-            g_SnepClientState = eSnepClientState_READY;
-            framework_NotifyMutex(g_SnepClientLock, 0);
-        } break;
-        case eSnepClientState_OFF:
-        {
-            g_SnepClientState = eSnepClientState_READY;
-        } break;
-        case eSnepClientState_WAIT_READY:
-        {
-            g_SnepClientState = eSnepClientState_READY;
-            framework_NotifyMutex(g_SnepClientLock, 0);
-        } break;
-        case eSnepClientState_READY:
-        {
-        } break;
-        case eSnepClientState_EXIT:
-        {
-        } break;
-    }
-    
-    framework_UnlockMutex(g_SnepClientLock);
-}
-
-void onSnepClientClosed()
-{
-    framework_LockMutex(g_devLock);
-    
-    switch(g_DevState)
-    {
-        case eDevState_WAIT_DEPARTURE:
-        {
-            g_DevState = eDevState_DEPARTED;
-            g_Dev_Type = eDevType_NONE;
-            framework_NotifyMutex(g_devLock, 0);
-        } break;
-        case eDevState_EXIT:
-        {
-            g_Dev_Type = eDevType_NONE;
-        } break;
-        case eDevState_NONE:
-        {
-            g_Dev_Type = eDevType_NONE;
-        } break;
-        case eDevState_WAIT_ARRIVAL:
-        {
-            g_Dev_Type = eDevType_NONE;
-        } break;
-        case eDevState_PRESENT:
-        {
-            g_Dev_Type = eDevType_NONE;
-            g_DevState = eDevState_DEPARTED;
-        } break;
-        case eDevState_DEPARTED:
-        {
-            g_Dev_Type = eDevType_NONE;
-        } break;
-    }
-    framework_UnlockMutex(g_devLock);
-    
-    framework_LockMutex(g_SnepClientLock);
-    
-    switch(g_SnepClientState)
-    {
-        case eSnepClientState_WAIT_OFF:
-        {
-            g_SnepClientState = eSnepClientState_OFF;
-            framework_NotifyMutex(g_SnepClientLock, 0);
-        } break;
-        case eSnepClientState_OFF:
-        {
-        } break;
-        case eSnepClientState_WAIT_READY:
-        {
-            g_SnepClientState = eSnepClientState_OFF;
-            framework_NotifyMutex(g_SnepClientLock, 0);
-        } break;
-        case eSnepClientState_READY:
-        {
-            g_SnepClientState = eSnepClientState_OFF;
-        } break;
-        case eSnepClientState_EXIT:
-        {
-        } break;
-    }
-    
-    framework_UnlockMutex(g_SnepClientLock);
 }
  
 int InitMode(int tag, int p2p, int hce)
 {
     int res = 0x00;
     
-    g_TagCB.onTagArrival = onTagArrival;
-    g_TagCB.onTagDeparture = onTagDeparture;
+    State::g_TagCB.onTagArrival = onTagArrival;
+    State::g_TagCB.onTagDeparture = onTagDeparture;
         
-    g_SnepServerCB.onDeviceArrival = onDeviceArrival;
-    g_SnepServerCB.onDeviceDeparture = onDeviceDeparture;
-    g_SnepServerCB.onMessageReceived = onMessageReceived;
+    State::g_SnepServerCB.onDeviceArrival = onDeviceArrival;
+    State::g_SnepServerCB.onDeviceDeparture = onDeviceDeparture;
+    State::g_SnepServerCB.onMessageReceived = onMessageReceived;
     
-    g_SnepClientCB.onDeviceArrival = onSnepClientReady;
-    g_SnepClientCB.onDeviceDeparture = onSnepClientClosed;
+    State::g_SnepClientCB.onDeviceArrival = onSnepClientReady;
+    State::g_SnepClientCB.onDeviceDeparture = onSnepClientClosed;
         
-    g_HceCB.onDataReceived = onDataReceived;
-    g_HceCB.onHostCardEmulationActivated = onHostCardEmulationActivated;
-    g_HceCB.onHostCardEmulationDeactivated = onHostCardEmulationDeactivated;
+    State::g_HceCB.onDataReceived = onDataReceived;
+    State::g_HceCB.onHostCardEmulationActivated = onHostCardEmulationActivated;
+    State::g_HceCB.onHostCardEmulationDeactivated = onHostCardEmulationDeactivated;
     
     if(0x00 == res)
     {
@@ -1335,12 +480,12 @@ int InitMode(int tag, int p2p, int hce)
     {
         if(0x01 == tag)
         {
-            nfcManager_registerTagCallback(&g_TagCB);
+            nfcManager_registerTagCallback(&State::g_TagCB);
         }
         
         if(0x01 == p2p)
         {
-            res = nfcSnep_registerClientCallback(&g_SnepClientCB);
+            res = nfcSnep_registerClientCallback(&State::g_SnepClientCB);
             if(0x00 != res)
             {
                 printf("SNEP Client Register Callback Failed\n");
@@ -1350,14 +495,14 @@ int InitMode(int tag, int p2p, int hce)
     
     if(0x00 == res && 0x01 == hce)
     {
-        nfcHce_registerHceCallback(&g_HceCB);
+        nfcHce_registerHceCallback(&State::g_HceCB);
     }
     if(0x00 == res)
     {
         nfcManager_enableDiscovery(DEFAULT_NFA_TECH_MASK, 0x00, hce, 0);
         if(0x01 == p2p)
         {
-            res = nfcSnep_startServer(&g_SnepServerCB);
+            res = nfcSnep_startServer(&State::g_SnepServerCB);
             if(0x00 != res)
             {
                 printf("Start SNEP Server Failed\n");
@@ -1395,23 +540,23 @@ int SnepPush(unsigned char* msgToPush, unsigned int len)
 {
     int res = 0x00;
     
-    framework_LockMutex(g_devLock);
-    framework_LockMutex(g_SnepClientLock);
+    framework_LockMutex(State::g_devLock);
+    framework_LockMutex(State::g_SnepClientLock);
     
-    if(eSnepClientState_READY != g_SnepClientState && eSnepClientState_EXIT!= g_SnepClientState && eDevState_PRESENT == g_DevState)
+    if(State::eSnepClientState_READY != State::g_SnepClientState && State::eSnepClientState_EXIT!= State::g_SnepClientState && State::eDevState_PRESENT == State::g_DevState)
     {
-        framework_UnlockMutex(g_devLock);
-        g_SnepClientState = eSnepClientState_WAIT_READY;
-        framework_WaitMutex(g_SnepClientLock, 0);
+        framework_UnlockMutex(State::g_devLock);
+        State::g_SnepClientState = State::eSnepClientState_WAIT_READY;
+        framework_WaitMutex(State::g_SnepClientLock, 0);
     }
     else
     {
-        framework_UnlockMutex(g_devLock);
+        framework_UnlockMutex(State::g_devLock);
     }
     
-    if(eSnepClientState_READY == g_SnepClientState)
+    if(State::eSnepClientState_READY == State::g_SnepClientState)
     {
-        framework_UnlockMutex(g_SnepClientLock);
+        framework_UnlockMutex(State::g_SnepClientLock);
         res = nfcSnep_putMessage(msgToPush, len);
         
         if(0x00 != res)
@@ -1425,7 +570,7 @@ int SnepPush(unsigned char* msgToPush, unsigned int len)
     }
     else
     {
-        framework_UnlockMutex(g_SnepClientLock);
+        framework_UnlockMutex(State::g_SnepClientLock);
     }
     
     return res;
@@ -1877,7 +1022,7 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
     int block = 0x01;
     unsigned char key[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     ndef_info_t NDEFinfo;
-    eDevType DevTypeBck = eDevType_NONE;
+    State::eDevType DevTypeBck = State::eDevType_NONE;
     unsigned char MifareAuthCmd[] = {0x60U, 0x00 /*block*/, 0x02, 0x02, 0x02, 0x02, 0x00 /*key*/, 0x00 /*key*/, 0x00 /*key*/, 0x00 /*key*/ , 0x00 /*key*/, 0x00 /*key*/};
     unsigned char MifareAuthResp[255];
     unsigned char MifareReadCmd[] = {0x30U,  /*block*/ 0x00};
@@ -1900,49 +1045,43 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
     
     do
     {
-        framework_LockMutex(g_devLock);
-        if(eDevState_EXIT == g_DevState)
+        framework_LockMutex(State::g_devLock);
+        if(State::eDevState_EXIT == State::g_DevState)
         {
-            framework_UnlockMutex(g_devLock);
+            framework_UnlockMutex(State::g_devLock);
             break;
         }
         
-        else if(eDevState_PRESENT != g_DevState)
+        else if(State::eDevState_PRESENT != State::g_DevState)
         {
                if(tag_count == 0) printf("Waiting for a Tag/Device...\n\n");
-            g_DevState = eDevState_WAIT_ARRIVAL;
-            framework_WaitMutex(g_devLock, 0);
+            State::g_DevState = State::eDevState_WAIT_ARRIVAL;
+            framework_WaitMutex(State::g_devLock, 0);
         }
         
-        if(eDevState_EXIT == g_DevState)
+        if(State::eDevState_EXIT == State::g_DevState)
         {
-            framework_UnlockMutex(g_devLock);
+            framework_UnlockMutex(State::g_devLock);
             break;
         }
         
-        if(eDevState_PRESENT == g_DevState)
+        if(State::eDevState_PRESENT == State::g_DevState)
         {
-            DevTypeBck = g_Dev_Type;
-            if(eDevType_TAG == g_Dev_Type)
+            DevTypeBck = State::g_Dev_Type;
+            if(State::eDevType_TAG == State::g_Dev_Type)
             {
                 tagInfo = Napi::Object::New(pollEnv);
                 uid = Napi::Object::New(pollEnv);
                 technology = Napi::Object::New(pollEnv);
                 
-                memcpy(&TagInfo, &g_TagInfo, sizeof(nfc_tag_info_t));
-                framework_UnlockMutex(g_devLock);
+                memcpy(&TagInfo, &State::g_TagInfo, sizeof(nfc_tag_info_t));
+                framework_UnlockMutex(State::g_devLock);
                 printf("        Type : ");
                 
                 technology.Set("code", TagInfo.technology);
                 
                 switch (TagInfo.technology)
                 {
-                    case TARGET_TYPE_UNKNOWN:
-                    {
-                      technology.Set("name", "Unknown");
-                      technology.Set("type", "UNKNOWN");
-                        printf("        'Type Unknown'\n");
-                    } break;
                     case TARGET_TYPE_ISO14443_3A:
                     {
                       technology.Set("name", "Type A");
@@ -2012,7 +1151,7 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                     default:
                     {
                       technology.Set("name", "Unknown or not supported");
-                      technology.Set("type", "UNSUPPORTED");
+                      technology.Set("type", "UNKNOWN");
                         printf("        'Type %d (Unknown or not supported)'\n", TagInfo.technology);
                     } break;
                 }
@@ -2190,13 +1329,13 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                         tag_count = 0;
                     }
                 }
-                 framework_LockMutex(g_devLock);
+                 framework_LockMutex(State::g_devLock);
                  
                  pollCB.Call(pollEnv.Global(), { tagInfo });
             }
-            else if(eDevType_P2P == g_Dev_Type)/*P2P Detected*/
+            else if(State::eDevType_P2P == State::g_Dev_Type)/*P2P Detected*/
             {
-                framework_UnlockMutex(g_devLock);
+                framework_UnlockMutex(State::g_devLock);
                  printf("\tDevice Found\n");
                 
                 if(2 == mode)
@@ -2204,53 +1343,53 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                     SnepPush(msgToSend, len);
                 }
                 
-                framework_LockMutex(g_SnepClientLock);
+                framework_LockMutex(State::g_SnepClientLock);
     
-                if(eSnepClientState_READY == g_SnepClientState)
+                if(State::eSnepClientState_READY == State::g_SnepClientState)
                 {
-                    g_SnepClientState = eSnepClientState_WAIT_OFF;
-                    framework_WaitMutex(g_SnepClientLock, 0);
+                    State::g_SnepClientState = State::eSnepClientState_WAIT_OFF;
+                    framework_WaitMutex(State::g_SnepClientLock, 0);
                 }
                 
-                framework_UnlockMutex(g_SnepClientLock);
-                framework_LockMutex(g_devLock);
+                framework_UnlockMutex(State::g_SnepClientLock);
+                framework_LockMutex(State::g_devLock);
         
             }
-            else if(eDevType_READER == g_Dev_Type)
+            else if(State::eDevType_READER == State::g_Dev_Type)
             {                
-                framework_LockMutex(g_HCELock);
+                framework_LockMutex(State::g_HCELock);
                 do
                 {
-                    framework_UnlockMutex(g_devLock);
+                    framework_UnlockMutex(State::g_devLock);
                 
-                    if(eHCEState_NONE == g_HCEState)
+                    if(State::eHCEState_NONE == State::g_HCEState)
                     {
-                        g_HCEState = eHCEState_WAIT_DATA;
-                        framework_WaitMutex(g_HCELock, 0x00);
+                        State::g_HCEState = State::eHCEState_WAIT_DATA;
+                        framework_WaitMutex(State::g_HCELock, 0x00);
                     }
                     
-                    if(eHCEState_DATA_RECEIVED == g_HCEState)
+                    if(State::eHCEState_DATA_RECEIVED == State::g_HCEState)
                     {
-                        g_HCEState = eHCEState_NONE;
+                        State::g_HCEState = State::eHCEState_NONE;
                         
-                        if(HCE_data != NULL)
+                        if(State::HCE_data != NULL)
                         {
                             printf("\t\tReceived data from remote device : \n\t\t");
                             
-                            for(i = 0x00; i < HCE_dataLenght; i++)
+                            for(i = 0x00; i < State::HCE_dataLenght; i++)
                             {
-                                printf("%02X ", HCE_data[i]);
+                                printf("%02X ", State::HCE_data[i]);
                             }
                             
                             /*Call HCE response builder*/
-                            T4T_NDEF_EMU_Next(HCE_data, HCE_dataLenght, HCEReponse, &HCEResponseLen);
-                            free(HCE_data);
-                            HCE_dataLenght = 0x00;
-                            HCE_data = NULL;
+                            T4T_NDEF_EMU_Next(State::HCE_data, State::HCE_dataLenght, HCEReponse, &HCEResponseLen);
+                            free(State::HCE_data);
+                            State::HCE_dataLenght = 0x00;
+                            State::HCE_data = NULL;
                         }
-                        framework_UnlockMutex(g_HCELock);
+                        framework_UnlockMutex(State::g_HCELock);
                         res = nfcHce_sendCommand(HCEReponse, HCEResponseLen);
-                        framework_LockMutex(g_HCELock);
+                        framework_LockMutex(State::g_HCELock);
                         if(0x00 == res)
                         {
                             printf("\n\n\t\tResponse sent : \n\t\t");
@@ -2265,33 +1404,33 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                             printf("\n\n\t\tFailed to send response\n\n");
                         }
                     }
-                    framework_LockMutex(g_devLock);
-                }while(eDevState_PRESENT == g_DevState);
-                framework_UnlockMutex(g_HCELock);
+                    framework_LockMutex(State::g_devLock);
+                }while(State::eDevState_PRESENT == State::g_DevState);
+                framework_UnlockMutex(State::g_HCELock);
             }
             else
             {
-                framework_UnlockMutex(g_devLock);
+                framework_UnlockMutex(State::g_devLock);
                 break;
             }
             
-            if(eDevState_PRESENT == g_DevState)
+            if(State::eDevState_PRESENT == State::g_DevState)
             {
-                g_DevState = eDevState_WAIT_DEPARTURE;
-                framework_WaitMutex(g_devLock, 0);
-                if(eDevType_P2P == DevTypeBck)
+                State::g_DevState = State::eDevState_WAIT_DEPARTURE;
+                framework_WaitMutex(State::g_devLock, 0);
+                if(State::eDevType_P2P == DevTypeBck)
                 {
                     printf("\tDevice Lost\n\n");
                 }
-                DevTypeBck = eDevType_NONE;
+                DevTypeBck = State::eDevType_NONE;
             }
-            else if(eDevType_P2P == DevTypeBck)
+            else if(State::eDevType_P2P == DevTypeBck)
             {
                 printf("\tDevice Lost\n\n");
             }
         }
         
-        framework_UnlockMutex(g_devLock);
+        framework_UnlockMutex(State::g_devLock);
     }while(0x01);
     
     return res;
@@ -2812,32 +1951,32 @@ void* ExitThread(void* pContext)
     
     getchar();
     
-    framework_LockMutex(g_SnepClientLock);
+    framework_LockMutex(State::g_SnepClientLock);
     
-    if(eSnepClientState_WAIT_OFF == g_SnepClientState || eSnepClientState_WAIT_READY == g_SnepClientState)
+    if(State::eSnepClientState_WAIT_OFF == State::g_SnepClientState || State::eSnepClientState_WAIT_READY == State::g_SnepClientState)
     {
-        g_SnepClientState = eSnepClientState_EXIT;
-        framework_NotifyMutex(g_SnepClientLock, 0);
+        State::g_SnepClientState = State::eSnepClientState_EXIT;
+        framework_NotifyMutex(State::g_SnepClientLock, 0);
     }
     else
     {
-        g_SnepClientState = eSnepClientState_EXIT;
+        State::g_SnepClientState = State::eSnepClientState_EXIT;
     }
-    framework_UnlockMutex(g_SnepClientLock);
+    framework_UnlockMutex(State::g_SnepClientLock);
     
-    framework_LockMutex(g_devLock);
+    framework_LockMutex(State::g_devLock);
     
-    if(eDevState_WAIT_ARRIVAL == g_DevState || eDevState_WAIT_DEPARTURE == g_DevState)
+    if(State::eDevState_WAIT_ARRIVAL == State::g_DevState || State::eDevState_WAIT_DEPARTURE == State::g_DevState)
     {
-        g_DevState = eDevState_EXIT;
-        framework_NotifyMutex(g_devLock, 0);
+        State::g_DevState = State::eDevState_EXIT;
+        framework_NotifyMutex(State::g_devLock, 0);
     }
     else
     {
-        g_DevState = eDevState_EXIT;
+        State::g_DevState = State::eDevState_EXIT;
     }
     
-    framework_UnlockMutex(g_devLock);
+    framework_UnlockMutex(State::g_devLock);
     return NULL;
 }
 
@@ -2846,7 +1985,7 @@ int InitEnv()
     eResult tool_res = FRAMEWORK_SUCCESS;
     int res = 0x00;
     
-    tool_res = framework_CreateMutex(&g_devLock);
+    tool_res = framework_CreateMutex(&State::g_devLock);
     if(FRAMEWORK_SUCCESS != tool_res)
     {
         res = 0xFF;
@@ -2854,7 +1993,7 @@ int InitEnv()
     
     if(0x00 == res)
     {
-        tool_res = framework_CreateMutex(&g_SnepClientLock);
+        tool_res = framework_CreateMutex(&State::g_SnepClientLock);
         if(FRAMEWORK_SUCCESS != tool_res)
         {
             res = 0xFF;
@@ -2863,7 +2002,7 @@ int InitEnv()
      
      if(0x00 == res)
     {
-        tool_res = framework_CreateMutex(&g_HCELock);
+        tool_res = framework_CreateMutex(&State::g_HCELock);
         if(FRAMEWORK_SUCCESS != tool_res)
         {
             res = 0xFF;
@@ -2871,7 +2010,7 @@ int InitEnv()
      }
      if(0x00 == res)
     {
-        tool_res = framework_CreateThread(&g_ThreadHandle, ExitThread, NULL);
+        tool_res = framework_CreateThread(&State::g_ThreadHandle, ExitThread, NULL);
         if(FRAMEWORK_SUCCESS != tool_res)
         {
             res = 0xFF;
@@ -2882,28 +2021,28 @@ int InitEnv()
 
 int CleanEnv()
 {
-    if(NULL != g_ThreadHandle)
+    if(NULL != State::g_ThreadHandle)
     {
-        framework_JoinThread(g_ThreadHandle);
-        framework_DeleteThread(g_ThreadHandle);
-        g_ThreadHandle = NULL;
+        framework_JoinThread(State::g_ThreadHandle);
+        framework_DeleteThread(State::g_ThreadHandle);
+        State::g_ThreadHandle = NULL;
     }
         
-    if(NULL != g_devLock)
+    if(NULL != State::g_devLock)
     {
-        framework_DeleteMutex(g_devLock);
-        g_devLock = NULL;
+        framework_DeleteMutex(State::g_devLock);
+        State::g_devLock = NULL;
     }
     
-    if(NULL != g_SnepClientLock)
+    if(NULL != State::g_SnepClientLock)
     {
-        framework_DeleteMutex(g_SnepClientLock);
-        g_SnepClientLock = NULL;
+        framework_DeleteMutex(State::g_SnepClientLock);
+        State::g_SnepClientLock = NULL;
     }
-    if(NULL != g_HCELock)
+    if(NULL != State::g_HCELock)
     {
-        framework_DeleteMutex(g_HCELock);
-        g_HCELock = NULL;
+        framework_DeleteMutex(State::g_HCELock);
+        State::g_HCELock = NULL;
     }
     return 0x00;
 }
@@ -3011,6 +2150,11 @@ void OnPoll(const Napi::CallbackInfo& info) {
 
 }
 
+void OnError(const Napi::CallbackInfo& info) {
+  errorEnv = info.Env();
+  errorCB = info[0].As<Napi::Function>();
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set(
         Napi::String::New(env, "hello"),
@@ -3020,6 +2164,11 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set(
         Napi::String::New(env, "poll"),
         Napi::Function::New(env, OnPoll)
+    );
+    
+    exports.Set(
+      Napi::String::New(env, "error"),
+      Napi::Function::New(env, OnError)
     );
 
     return exports;
