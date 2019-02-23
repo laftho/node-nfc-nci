@@ -45,19 +45,19 @@ namespace State {
       NDEF_Selected
   } T4T_NDEF_EMU_state_t;
 
-  static void* g_ThreadHandle = NULL;
-  static void* g_devLock = NULL;
-  static void* g_SnepClientLock = NULL;
-  static void* g_HCELock = NULL;
-  static eDevState g_DevState = eDevState_NONE;
-  static eDevType g_Dev_Type = eDevType_NONE;
-  static eSnepClientState g_SnepClientState = eSnepClientState_OFF;
-  static eHCEState g_HCEState = eHCEState_NONE;
-  static nfc_tag_info_t g_TagInfo;
-  static nfcTagCallback_t g_TagCB;
-  static nfcHostCardEmulationCallback_t g_HceCB;
-  static nfcSnepServerCallback_t g_SnepServerCB;
-  static nfcSnepClientCallback_t g_SnepClientCB;
+  extern void* g_ThreadHandle;
+  extern void* g_devLock;
+  extern void* g_SnepClientLock;
+  extern void* g_HCELock;
+  extern eDevState g_DevState;
+  extern eDevType g_Dev_Type;
+  extern eSnepClientState g_SnepClientState;
+  extern eHCEState g_HCEState;
+  extern nfc_tag_info_t g_TagInfo;
+  extern nfcTagCallback_t g_TagCB;
+  extern nfcHostCardEmulationCallback_t g_HceCB;
+  extern nfcSnepServerCallback_t g_SnepServerCB;
+  extern nfcSnepClientCallback_t g_SnepClientCB;
 }
 
 #endif
