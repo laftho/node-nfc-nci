@@ -26,4 +26,7 @@ void onDeviceDeparture (void);
 void onSnepClientReady();
 void onSnepClientClosed();
 
+unsigned char* getHCEdata();
+int getHCEdatalength();
+
 #endif

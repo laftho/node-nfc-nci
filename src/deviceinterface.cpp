@@ -6,6 +6,9 @@
 #include <linux_nfc_api.h>
 #include "state.h"
 
+unsigned char *HCE_data = NULL;
+unsigned int HCE_dataLenght = 0x00;
+
 const unsigned char T4T_NDEF_EMU_APP_Select[] = {0x00,0xA4,0x04,0x00,0x07,0xD2,0x76,0x00,0x00,0x85,0x01,0x01};
 const unsigned char T4T_NDEF_EMU_CC[] = {0x00, 0x0F, 0x20, 0x00, 0xFF, 0x00, 0xFF, 0x04, 0x06, 0xE1, 0x04, 0x00, 0xFF, 0x00, 0xFF};
 const unsigned char T4T_NDEF_EMU_CC_Select[] = {0x00,0xA4,0x00,0x0C,0x02,0xE1,0x03};
@@ -112,15 +115,24 @@ void T4T_NDEF_EMU_Next(unsigned char *pCmd, unsigned short Cmd_size, unsigned ch
         T4T_NDEF_EMU_Reset();
     }
 }
+
+unsigned char* getHCEdata() {
+  return HCE_data;
+}
+
+int getHCEdatalength() {
+  return HCE_dataLenght;
+}
+
 /********************************** CallBack **********************************/
 
 void onDataReceived(unsigned char *data, unsigned int data_length)
 {
     framework_LockMutex(State::g_HCELock);
     
-    State::HCE_dataLenght = data_length;
-    State::HCE_data = (unsigned char*)malloc(State::HCE_dataLenght * sizeof(unsigned char));
-    memcpy(State::HCE_data, data, data_length);
+    HCE_dataLenght = data_length;
+    HCE_data = (unsigned char*)malloc(HCE_dataLenght * sizeof(unsigned char));
+    memcpy(HCE_data, data, data_length);
     
     if(State::eHCEState_NONE == State::g_HCEState)
     {

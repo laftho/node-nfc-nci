@@ -58,9 +58,6 @@ namespace State {
   static nfcHostCardEmulationCallback_t g_HceCB;
   static nfcSnepServerCallback_t g_SnepServerCB;
   static nfcSnepClientCallback_t g_SnepClientCB;
-
-  static unsigned char *HCE_data = NULL;
-  static unsigned int HCE_dataLenght = 0x00;
 }
 
 #endif

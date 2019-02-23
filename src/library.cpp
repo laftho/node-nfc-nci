@@ -1372,20 +1372,23 @@ int WaitDeviceArrival(int mode, unsigned char* msgToSend, unsigned int len)
                     {
                         State::g_HCEState = State::eHCEState_NONE;
                         
-                        if(State::HCE_data != NULL)
+                        unsigned char* HCE_data = getHCEdata();
+                        int HCE_dataLenght = getHCEdatalength();
+                        
+                        if(HCE_data != NULL)
                         {
                             printf("\t\tReceived data from remote device : \n\t\t");
                             
-                            for(i = 0x00; i < State::HCE_dataLenght; i++)
+                            for(i = 0x00; i < HCE_dataLenght; i++)
                             {
-                                printf("%02X ", State::HCE_data[i]);
+                                printf("%02X ", HCE_data[i]);
                             }
                             
                             /*Call HCE response builder*/
-                            T4T_NDEF_EMU_Next(State::HCE_data, State::HCE_dataLenght, HCEReponse, &HCEResponseLen);
-                            free(State::HCE_data);
-                            State::HCE_dataLenght = 0x00;
-                            State::HCE_data = NULL;
+                            T4T_NDEF_EMU_Next(HCE_data, HCE_dataLenght, HCEReponse, &HCEResponseLen);
+                            free(HCE_data);
+                            HCE_dataLenght = 0x00;
+                            HCE_data = NULL;
                         }
                         framework_UnlockMutex(State::g_HCELock);
                         res = nfcHce_sendCommand(HCEReponse, HCEResponseLen);
