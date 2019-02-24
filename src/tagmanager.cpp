@@ -84,6 +84,8 @@ TagManager::TagManager()
 TagManager::~TagManager()
 {
   
+  nfcSnep_stopServer();
+  
   nfcManager_disableDiscovery();
   
   nfcManager_deregisterTagCallback();
