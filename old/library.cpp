@@ -2157,7 +2157,7 @@ void OnError(const Napi::CallbackInfo& info) {
   errorEnv = info.Env();
   errorCB = info[0].As<Napi::Function>();
 }
-
+/*
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set(
         Napi::String::New(env, "hello"),
@@ -2176,5 +2176,5 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
 
     return exports;
 }
-
-NODE_API_MODULE(hello, Init)
+*/
+// NODE_API_MODULE(hello, Init)

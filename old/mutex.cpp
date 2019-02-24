@@ -16,33 +16,53 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NODEINTERFACE_H
-#define NODEINTERFACE_H
+#include <pthread.h>
+#include "mutex.h"
 
-#include "napi.h"
-#include "tagmanager.h"
-
-/**
- * @todo write docs
- */
-class NodeInterface // : public ITagManager
+Mutex::Mutex()
 {
-private:
-  Napi::Env* env;
-  Napi::Function* callback;
-public:
-    /**
-     * Default constructor
-     */
-    NodeInterface(Napi::Env& env, Napi::Function& callback);
+  pthread_mutex_init(lock, NULL);
+  pthread_cond_init(cond, NULL);
+}
 
+Mutex::~Mutex()
+{
+  pthread_mutex_destroy(lock);
+  pthread_cond_destroy(cond);
+}
 
-    /**
-     * Destructor
-     */
-    ~NodeInterface();
-    
-    void onTag(Tag tag);
-};
+int Mutex::Lock()
+{
+  return pthread_mutex_lock(lock);
+}
 
-#endif // NODEINTERFACE_H
+int Mutex::Unlock()
+{
+  return pthread_mutex_unlock(lock);
+}
+
+void Mutex::Wait(bool needLock)
+{
+  if (needLock) {
+    Lock();
+  }
+  
+  pthread_cond_wait(cond, lock);
+  
+  if (needLock) {
+    Unlock();
+  }
+}
+
+void Mutex::Notify(bool needLock)
+{
+  if (needLock) {
+    Lock();
+  }
+  
+  pthread_cond_broadcast(cond);
+  
+  if (needLock) {
+    Unlock();
+  }
+}

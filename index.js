@@ -1,6 +1,6 @@
-const addon = require('./build/Release/node_nfc_nci');
+const addon = require('./build/Debug/node_nfc_nci');
 
-console.log(addon.hello());
+// console.log(addon.hello());
 
 addon.poll(arg => {
     console.log(JSON.stringify(arg));
