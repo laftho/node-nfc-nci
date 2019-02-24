@@ -47,6 +47,16 @@ void deviceOnTagDeparture(void)
   TagManager::getInstance().onTagDeparture();
 }
 
+void deviceOnSnepClientReady()
+{
+  TagManager::getInstance().onSnepClientReady();
+}
+
+void deviceOnSnepClientClosed()
+{
+  TagManager::getInstance().onSnepClientClosed();
+}
+
 void deviceOnDeviceArrival(void)
 {
   TagManager::getInstance().onDeviceArrival();
@@ -76,6 +86,9 @@ TagManager::TagManager()
   tagCallback.onTagArrival = deviceOnTagArrival;
   tagCallback.onTagDeparture = deviceOnTagDeparture;
   
+  snepClientCallback.onDeviceArrival = deviceOnSnepClientReady;
+  snepClientCallback.onDeviceDeparture = deviceOnSnepClientClosed;
+  
   snepServerCallback.onDeviceArrival = deviceOnDeviceArrival;
   snepServerCallback.onDeviceDeparture = deviceOnDeviceDeparture;
   snepServerCallback.onMessageReceived = deviceOnMessageReceived;
@@ -87,6 +100,8 @@ TagManager::~TagManager()
   nfcSnep_stopServer();
   
   nfcManager_disableDiscovery();
+  
+  nfcSnep_deregisterClientCallback();
   
   nfcManager_deregisterTagCallback();
   
@@ -105,6 +120,12 @@ void TagManager::initialize() // ITagManager tagInterface)
   }
   
   nfcManager_registerTagCallback(&tagCallback);
+  
+  res = nfcSnep_registerClientCallback(&snepClientCallback);
+  if(0x00 != res)
+  {
+      printf("SNEP Client Register Callback Failed\n");
+  }
   
   nfcManager_enableDiscovery(DEFAULT_NFA_TECH_MASK, 0x00, 0x00, 0);
   
@@ -327,6 +348,14 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
 }
 
 void TagManager::onTagDeparture()
+{
+}
+
+void TagManager::onSnepClientReady()
+{
+}
+
+void TagManager::onSnepClientClosed()
 {
 }
 

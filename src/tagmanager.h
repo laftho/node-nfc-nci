@@ -88,6 +88,7 @@ class TagManager
 private:
   // Mutex *deviceMutex;
   nfcTagCallback_t tagCallback;
+  nfcSnepClientCallback_t snepClientCallback;
   nfcSnepServerCallback_t snepServerCallback;
   
   // ITagManager tagInterface;
@@ -115,6 +116,9 @@ public:
     void onDeviceArrival(void);
     void onDeviceDeparture(void);
     void onMessageReceived(unsigned char *message, unsigned int length);
+    
+    void onSnepClientReady();
+    void onSnepClientClosed();
     
     static TagManager& getInstance();
 };
