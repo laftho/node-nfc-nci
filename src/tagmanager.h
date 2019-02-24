@@ -32,6 +32,14 @@ class NFCManagerInitializationException: public std::exception
   }
 };
 
+class NFCSNEPClientRegisterException: public std::exception
+{
+  virtual const char* what() const throw()
+  {
+    return "SNEP Client register callbacks failed";
+  }
+};
+
 class NFCSNEPServerStartException: public std::exception
 {
   virtual const char* what() const throw()

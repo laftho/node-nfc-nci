@@ -29,6 +29,7 @@
 
 NFCManagerInitializationException nfcManagerInitializationException;
 NFCSNEPServerStartException nfcSNEPServerStartException;
+NFCSNEPClientRegisterException nfcSNEPClientRegisterException;
 
 TagNDEF::TagNDEF()
 {
@@ -124,7 +125,7 @@ void TagManager::initialize() // ITagManager tagInterface)
   res = nfcSnep_registerClientCallback(&snepClientCallback);
   if(0x00 != res)
   {
-      printf("SNEP Client Register Callback Failed\n");
+      throw nfcSNEPClientRegisterException;
   }
   
   nfcManager_enableDiscovery(DEFAULT_NFA_TECH_MASK, 0x00, 0x00, 0);
