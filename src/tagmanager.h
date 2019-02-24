@@ -85,7 +85,7 @@ public:
 
 class ITagManager {
 public:
-  virtual void onTag(Tag tag);
+  virtual void onTag(Tag tag) = 0;
 };
 
 /**
@@ -99,7 +99,7 @@ private:
   nfcSnepClientCallback_t snepClientCallback;
   nfcSnepServerCallback_t snepServerCallback;
   
-  // ITagManager tagInterface;
+  ITagManager* tagInterface;
   
   TagManager();
   
@@ -116,7 +116,7 @@ public:
      */
     ~TagManager();
 
-    void initialize(); //ITagManager tagInterface);
+    void initialize(ITagManager& tagInterface);
 
     void onTagArrival(nfc_tag_info_t *pTagInfo);
     void onTagDeparture(void);

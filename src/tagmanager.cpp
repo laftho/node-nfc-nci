@@ -109,9 +109,9 @@ TagManager::~TagManager()
   nfcManager_doDeinitialize();
 }
 
-void TagManager::initialize() // ITagManager tagInterface)
+void TagManager::initialize(ITagManager& tagInterface)
 {
-  // this->tagInterface = tagInterface;
+  this->tagInterface = &tagInterface;
   int res = 0x00;
   
   res = nfcManager_doInitialize();
@@ -345,7 +345,7 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
   }
   
   
-  // tagInterface.onTag(tag);
+  tagInterface->onTag(tag);
 }
 
 void TagManager::onTagDeparture()

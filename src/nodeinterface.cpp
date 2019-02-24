@@ -67,7 +67,7 @@ void poll(const Napi::CallbackInfo& info)
   
   NodeInterface nodei = NodeInterface(env, callback);
   
-  TagManager::getInstance().initialize(); // nodei);
+  TagManager::getInstance().initialize(nodei);
   
 }
 

@@ -25,7 +25,7 @@
 /**
  * @todo write docs
  */
-class NodeInterface // : public ITagManager
+class NodeInterface: public ITagManager
 {
 private:
   Napi::Env* env;
