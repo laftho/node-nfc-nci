@@ -81,6 +81,8 @@ void TagManager::initialize() // ITagManager tagInterface)
   
   nfcManager_registerTagCallback(&tagCallback);
   
+  nfcManager_enableDiscovery(DEFAULT_NFA_TECH_MASK, 0x00, 0x00, 0);
+  
   /*while (0x01) {
     sleep(10);
   }*/
