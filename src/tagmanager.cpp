@@ -18,9 +18,13 @@
 #include <string.h>
 #include <sstream>
 #include <iomanip>
+
+#include <unistd.h>
+
 #include <linux_nfc_api.h>
 
 #include "tagmanager.h"
+
 // #include "mutex.h"
 
 NFCManagerInitializationException nfcManagerInitializationException;
@@ -76,6 +80,10 @@ void TagManager::initialize() // ITagManager tagInterface)
   }
   
   nfcManager_registerTagCallback(&tagCallback);
+  
+  while (0x01) {
+    sleep(10);
+  }
 }
 
 void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
