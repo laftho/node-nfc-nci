@@ -34,7 +34,7 @@ public:
     /**
      * Default constructor
      */
-    NodeInterface(Napi::Env& env, Napi::Function& callback);
+    NodeInterface(Napi::Env* env, Napi::Function* callback);
 
 
     /**

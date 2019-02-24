@@ -137,6 +137,51 @@ void TagManager::initialize(ITagManager& tagInterface)
       throw nfcSNEPServerStartException;
   }
   
+  // TODO fixme
+  // fix this to be a proper loop and mutex wait lock crap
+  //  v8 is crashing saying illegal instruction because it seems proper locking isn't in place
+  //  my guess is that the on tag stuff is coming from the NFC_TASK thread and there's missing some
+  //  locking stuff that we'd get from the mutex in the example that would work around this
+  /*
+   * 
+#
+# Fatal error in HandleScope::HandleScope
+# Entering the V8 API without proper locking in place
+#
+
+
+Thread 10 "NFC_TASK" received signal SIGILL, Illegal instruction.
+[Switching to Thread 0x72cfd450 (LWP 20789)]
+0x01387830 in v8::base::OS::Abort() ()
+(gdb) info s
+#0  0x01387830 in v8::base::OS::Abort() ()
+#1  0x006eedc0 in v8::Utils::ReportApiFailure(char const*, char const*) ()
+#2  0x006f0280 in v8::EscapableHandleScope::EscapableHandleScope(v8::Isolate*) ()
+#3  0x0070e460 in v8::Function::Call(v8::Local<v8::Context>, v8::Local<v8::Value>, int, v8::Local<v8::Value>*) ()
+#4  0x004c7f24 in napi_call_function ()
+#5  0x742e6508 in Napi::Function::Call (this=0x7effe37c, recv=0x1d94318, argc=1, args=0x72cfc614) at /home/pi/source/node-nfc-nci/node_modules/node-addon-api/napi-inl.h:1704
+#6  0x742e64ac in Napi::Function::Call (this=0x7effe37c, recv=0x1d94318, args=...) at /home/pi/source/node-nfc-nci/node_modules/node-addon-api/napi-inl.h:1695
+#7  0x742e5328 in NodeInterface::onTag (this=0x7effe370, tag=...) at /home/pi/source/node-nfc-nci/src/nodeinterface.cpp:59
+#8  0x742e8abc in TagManager::onTagArrival (this=0x742fb40c <TagManager::getInstance()::instance>, pTagInfo=0x72cfc978) at /home/pi/source/node-nfc-nci/src/tagmanager.cpp:350
+#9  0x742e807c in deviceOnTagArrival (pTagInfo=0x72cfc978) at /home/pi/source/node-nfc-nci/src/tagmanager.cpp:43
+#10 0x73e9f860 in nativeNfcTag_onTagArrival(nfc_tag_info_t*) () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#11 0x73ea38c0 in NfcTag::createNativeNfcTag(tNFA_ACTIVATED&) () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#12 0x73eaafb8 in nfaConnectionCallback(unsigned char, tNFA_CONN_EVT_DATA*) () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#13 0x73e509f0 in nfa_dm_notify_activation_status () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#14 0x73e35094 in nfa_rw_activate_ntf () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#15 0x73e30f9c in nfa_rw_proc_disc_evt () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#16 0x73e50f88 in nfa_dm_poll_disc_cback () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#17 0x73e4d968 in nfa_dm_disc_notify_activation () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#18 0x73e4ce28 in nfa_dm_disc_sm_execute () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#19 0x73e66a44 in nfc_ncif_proc_activate () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#20 0x73e67fe8 in nfc_ncif_process_event () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#21 0x73e64044 in nfc_task () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#22 0x73e5b474 in gki_task_entry () from /usr/local/lib/libnfc_nci_linux-1.so.0
+#23 0x76d60fc4 in start_thread (arg=0x72cfd450) at pthread_create.c:458
+#24 0x76ced038 in ?? () at ../sysdeps/unix/sysv/linux/arm/clone.S:76 from /lib/arm-linux-gnueabihf/libc.so.6
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+   */
+  
   while (0x01) {
     sleep(10);
   }

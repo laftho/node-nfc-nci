@@ -20,10 +20,10 @@
 #include "nodeinterface.h"
 // #include "tagmanager.h"
 
-NodeInterface::NodeInterface(Napi::Env& env, Napi::Function& callback)
+NodeInterface::NodeInterface(Napi::Env *env, Napi::Function *callback)
 {
-  this->env = &env;
-  this->callback = &callback;
+  this->env = env;
+  this->callback = callback;
 }
 
 NodeInterface::~NodeInterface()
@@ -65,7 +65,7 @@ void poll(const Napi::CallbackInfo& info)
   Napi::Env env = info.Env();
   Napi::Function callback = info[0].As<Napi::Function>();
   
-  NodeInterface nodei = NodeInterface(env, callback);
+  NodeInterface nodei = NodeInterface(&env, &callback);
   
   TagManager::getInstance().initialize(nodei);
   
