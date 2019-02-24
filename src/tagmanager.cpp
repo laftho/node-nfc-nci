@@ -81,9 +81,9 @@ void TagManager::initialize() // ITagManager tagInterface)
   
   nfcManager_registerTagCallback(&tagCallback);
   
-  while (0x01) {
+  /*while (0x01) {
     sleep(10);
-  }
+  }*/
 }
 
 void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
