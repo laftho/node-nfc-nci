@@ -252,7 +252,9 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
   
   ndef_info_t ndefInfo;
   
-  unsigned int res = nfcTag_isNdef(tagInfo.handle, &ndefInfo);
+  unsigned int res = 0x00;
+  
+  res = nfcTag_isNdef(tagInfo.handle, &ndefInfo);
   
   if (res == 0x01) {
     
