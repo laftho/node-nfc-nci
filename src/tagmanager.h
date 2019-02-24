@@ -32,6 +32,14 @@ class NFCManagerInitializationException: public std::exception
   }
 };
 
+class NFCSNEPServerStartException: public std::exception
+{
+  virtual const char* what() const throw()
+  {
+    return "SNEP Service start failed";
+  }
+};
+
 class TagTechnology
 {
 public:
@@ -80,6 +88,7 @@ class TagManager
 private:
   // Mutex *deviceMutex;
   nfcTagCallback_t tagCallback;
+  nfcSnepServerCallback_t snepServerCallback;
   
   // ITagManager tagInterface;
   
@@ -102,6 +111,10 @@ public:
 
     void onTagArrival(nfc_tag_info_t *pTagInfo);
     void onTagDeparture(void);
+    
+    void onDeviceArrival(void);
+    void onDeviceDeparture(void);
+    void onMessageReceived(unsigned char *message, unsigned int length);
     
     static TagManager& getInstance();
 };

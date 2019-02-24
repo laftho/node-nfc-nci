@@ -28,6 +28,7 @@
 // #include "mutex.h"
 
 NFCManagerInitializationException nfcManagerInitializationException;
+NFCSNEPServerStartException nfcSNEPServerStartException;
 
 TagNDEF::TagNDEF()
 {
@@ -46,6 +47,21 @@ void deviceOnTagDeparture(void)
   TagManager::getInstance().onTagDeparture();
 }
 
+void deviceOnDeviceArrival(void)
+{
+  TagManager::getInstance().onDeviceArrival();
+}
+
+void deviceOnDeviceDeparture(void)
+{
+  TagManager::getInstance().onDeviceDeparture();
+}
+
+void deviceOnMessageReceived(unsigned char *message, unsigned int length)
+{
+  TagManager::getInstance().onMessageReceived(message, length);
+}
+
 TagManager& TagManager::getInstance()
 {
   static TagManager instance;
@@ -59,10 +75,17 @@ TagManager::TagManager()
   
   tagCallback.onTagArrival = deviceOnTagArrival;
   tagCallback.onTagDeparture = deviceOnTagDeparture;
+  
+  snepServerCallback.onDeviceArrival = deviceOnDeviceArrival;
+  snepServerCallback.onDeviceDeparture = deviceOnDeviceDeparture;
+  snepServerCallback.onMessageReceived = deviceOnMessageReceived;
 }
 
 TagManager::~TagManager()
 {
+  
+  nfcManager_disableDiscovery();
+  
   nfcManager_deregisterTagCallback();
   
   nfcManager_doDeinitialize();
@@ -82,6 +105,13 @@ void TagManager::initialize() // ITagManager tagInterface)
   nfcManager_registerTagCallback(&tagCallback);
   
   nfcManager_enableDiscovery(DEFAULT_NFA_TECH_MASK, 0x00, 0x00, 0);
+  
+  res = nfcSnep_startServer(&snepServerCallback);
+  
+  if(res != 0x00)
+  {
+      throw nfcSNEPServerStartException;
+  }
   
   /*while (0x01) {
     sleep(10);
@@ -298,4 +328,14 @@ void TagManager::onTagDeparture()
 {
 }
 
+void TagManager::onDeviceArrival()
+{
+}
 
+void TagManager::onDeviceDeparture()
+{
+}
+
+void TagManager::onMessageReceived(unsigned char* message, unsigned int length)
+{
+}
