@@ -1,48 +1,27 @@
-/*
- * <one line to give the library's name and an idea of what it does.>
- * Copyright (C) 2019  <copyright holder> <email>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 #ifndef NODEINTERFACE_H
 #define NODEINTERFACE_H
 
+#include <string>
 #include "napi.h"
 #include "tagmanager.h"
 
-/**
- * @todo write docs
- */
 class NodeInterface: public ITagManager
 {
 private:
   Napi::Env* env;
   Napi::Function* callback;
+  Napi::Function errorCallback;
+  Napi::Function tagArrivedCallback;
+  Napi::Function tagDepartedCallback;
 public:
-    /**
-     * Default constructor
-     */
-    NodeInterface(Napi::Env* env, Napi::Function* callback);
-
-
-    /**
-     * Destructor
-     */
-    ~NodeInterface();
-    
-    void onTag(Tag tag);
+  NodeInterface(Napi::Env* env, Napi::Function* callback);
+  ~NodeInterface();
+  
+  void on(const Napi::CallbackInfo& info);
+  
+  void onTagArrived(Tag tag);
+  void onTagDeparted();
+  void onError(std::string message);
 };
 
 #endif // NODEINTERFACE_H

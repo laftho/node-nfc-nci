@@ -14,7 +14,6 @@ namespace Device {
   NFCSNEPClientRegisterException nfcSNEPClientRegisterException;
   NFCSNEPServerStartException nfcSNEPServerStartException;
   
-  
   void initialize() {
     mutex = Mutex();
     tagCallback.onTagArrival = onTagArrival;

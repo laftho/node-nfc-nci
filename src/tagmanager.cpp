@@ -1,20 +1,3 @@
-/*
- * <one line to give the library's name and an idea of what it does.>
- * Copyright (C) 2019  <copyright holder> <email>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 #include <string.h>
 #include <sstream>
 #include <iomanip>
@@ -33,7 +16,6 @@ TagNDEF::TagNDEF()
   writeable = false;
 }
 
-
 TagManager& TagManager::getInstance()
 {
   static TagManager instance;
@@ -47,7 +29,7 @@ TagManager::~TagManager() {
   Device::deinitialize();
 }
 
-void TagManager::initialize(ITagManager& tagInterface)
+void TagManager::listen(ITagManager& tagInterface)
 {
   this->tagInterface = &tagInterface;
   
@@ -210,7 +192,7 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
       
       if (res != ndefInfo.current_ndef_length)
       {
-        // TODO failed to read all the data we requested.
+        tagInterface->onError("NDEF failed to read all data requested");
       } else {
         switch(lNDEFType)
         {
@@ -226,7 +208,7 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
               tag.ndef.type = "Text";
               tag.ndef.content = content;
             } else {
-              // TODO Read NDEF Text Error
+              tagInterface->onError("NDEF read text error");
             }
             
             if (content != NULL)
@@ -247,7 +229,7 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
               tag.ndef.type = "URI";
               tag.ndef.content = content;
             } else {
-              // TODO Read NDEF Text Error
+              tagInterface->onError("NDEF read url error");
             }
             
             if (content != NULL)
@@ -283,12 +265,12 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
     }
   }
   
-  
-  tagInterface->onTag(tag);
+  tagInterface->onTagArrived(tag);
 }
 
 void TagManager::onTagDeparture()
 {
+  tagInterface->onTagDeparted();
 }
 
 void TagManager::onSnepClientReady()
