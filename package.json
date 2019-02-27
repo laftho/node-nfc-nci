@@ -6,7 +6,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "install": "cmake-js compile"
+    "install": "cmake-js compile",
+    "rebuild": "cmake-js clean && cmake-js compile",
+    "rebuild:debug": "cmake-js -D clean && cmake-js -D compile"
   },
   "author": "Thomas LaFreniere",
   "license": "ISC",

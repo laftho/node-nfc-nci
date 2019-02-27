@@ -22,31 +22,6 @@
 #include <string>
 #include <exception>
 #include <linux_nfc_api.h>
-// #include "mutex.h"
-
-class NFCManagerInitializationException: public std::exception
-{
-  virtual const char* what() const throw()
-  {
-    return "NFC Manager failed to initialize";
-  }
-};
-
-class NFCSNEPClientRegisterException: public std::exception
-{
-  virtual const char* what() const throw()
-  {
-    return "SNEP Client register callbacks failed";
-  }
-};
-
-class NFCSNEPServerStartException: public std::exception
-{
-  virtual const char* what() const throw()
-  {
-    return "SNEP Service start failed";
-  }
-};
 
 class TagTechnology
 {
@@ -94,11 +69,6 @@ public:
 class TagManager
 {
 private:
-  // Mutex *deviceMutex;
-  nfcTagCallback_t tagCallback;
-  nfcSnepClientCallback_t snepClientCallback;
-  nfcSnepServerCallback_t snepServerCallback;
-  
   ITagManager* tagInterface;
   
   TagManager();
