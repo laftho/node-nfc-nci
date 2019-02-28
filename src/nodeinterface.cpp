@@ -22,7 +22,7 @@ void NodeInterface::onError(std::string message)
 
 void NodeInterface::onTagDeparted()
 {
-  emit->Call({ Napi::String::New(*env, "tagDeparted") });
+  emit->Call({ Napi::String::New(*env, "departed") });
 }
 
 void NodeInterface::onTagArrived(Tag tag)
@@ -50,7 +50,7 @@ void NodeInterface::onTagArrived(Tag tag)
   ndef.Set("content", tag.ndef.content);
   tagInfo.Set("ndef", ndef);
   
-  emit->Call({ Napi::String::New(*env, "tagArrived"), tagInfo });
+  emit->Call({ Napi::String::New(*env, "arrived"), tagInfo });
 }
 void listen(const Napi::CallbackInfo& info)
 {
