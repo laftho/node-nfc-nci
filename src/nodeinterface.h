@@ -6,6 +6,7 @@
 #include "napi.h"
 #include "tagmanager.h"
 #include "tag.h"
+#include "mutex.h"
 
 class Listener: public Napi::AsyncWorker {
 private:
@@ -35,6 +36,7 @@ class NodeInterface: public ITagManager
 private:
   Napi::Env* env;
   Napi::Function* emit;
+  Tag::Tag* tag;
 public:
   NodeInterface(Napi::Env* env, Napi::Function* callback);
   ~NodeInterface();
@@ -42,6 +44,7 @@ public:
   void write(const Napi::CallbackInfo& info);
   Napi::Object asNapiObjectTag(Tag::Tag tag);
 
+  void pOnTagArrived();
   void onTagArrived(Tag::Tag tag);
   void onTagDeparted();
   void onTagWritten(Tag::Tag tag);
@@ -49,5 +52,25 @@ public:
 };
 
 extern NodeInterface* nodei;
+
+class Event: public Napi::AsyncWorker {
+private:
+  Mutex* mutex;
+  NodeInterface* nodei;
+public:
+  Event(Napi::Function& callback, Mutex* mutex, NodeInterface* nodei)
+          : Napi::AsyncWorker(callback), mutex(mutex), nodei(nodei) {}
+
+  ~Event() {}
+  void Execute() {
+    mutex->Wait(true);
+  }
+
+  void OnOk() {
+    Napi::HandleScope scope(Env());
+    // Callback().Call({ Env().Null() });
+    nodei->pOnTagArrived();
+  }
+};
 
 #endif // NODE_NFC_NCI_NODEINTERFACE_H

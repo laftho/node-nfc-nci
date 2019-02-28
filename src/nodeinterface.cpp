@@ -3,6 +3,8 @@
 #include "nodeinterface.h"
 
 NodeInterface* nodei;
+Mutex* mutex;
+Event* event;
 
 NodeInterface::NodeInterface(Napi::Env *env, Napi::Function *callback)
 {
@@ -60,8 +62,18 @@ Napi::Object NodeInterface::asNapiObjectTag(Tag::Tag tag)
 
 void NodeInterface::onTagArrived(Tag::Tag tag)
 {
-  Napi::Object tagInfo = asNapiObjectTag(tag);
+  //Napi::Object tagInfo = asNapiObjectTag(tag);
   
+  //emit->Call({ Napi::String::New(*env, "arrived"), tagInfo });
+
+  this->tag = &tag;
+
+  mutex->Notify(true);
+}
+
+void NodeInterface::pOnTagArrived() {
+  Napi::Object tagInfo = asNapiObjectTag(*tag);
+
   emit->Call({ Napi::String::New(*env, "arrived"), tagInfo });
 }
 
@@ -90,6 +102,10 @@ Napi::Object listen(const Napi::CallbackInfo& info)
   Napi::Function finish = info[1].As<Napi::Function>();
   
   nodei = new NodeInterface(&env, &emit);
+
+  mutex = new Mutex();
+  event = new Event(emit, mutex, nodei);
+  event->Queue();
 
   // TagManager::getInstance().listen(nodei);
 
