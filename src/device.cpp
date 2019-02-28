@@ -70,7 +70,17 @@ namespace Device {
     mutex.Unlock();
   }
   
-  void onTagDeparture(void) {}
+  void onTagDeparture(void) {
+    mutex.Lock();
+
+    if (state == State::WAITING) {
+      state = State::TAG_DEPARTED;
+      mutex.Notify(false);
+    }
+
+    mutex.Unlock();
+  }
+
   void onSnepClientReady() {}
   void onSnepClientClosed() {}
   void onDeviceArrival(void) {}
