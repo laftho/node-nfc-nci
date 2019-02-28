@@ -2,6 +2,8 @@
 #include <exception>
 #include "nodeinterface.h"
 
+NodeInterface* nodei;
+
 NodeInterface::NodeInterface(Napi::Env *env, Napi::Function *callback)
 {
   this->env = env;
@@ -87,11 +89,11 @@ Napi::Object listen(const Napi::CallbackInfo& info)
   Napi::Function emit = info[0].As<Napi::Function>();
   Napi::Function finish = info[1].As<Napi::Function>();
   
-  nodei = NodeInterface(&env, &emit);
+  nodei = new NodeInterface(&env, &emit);
 
   // TagManager::getInstance().listen(nodei);
 
-  Listener* listener = new Listener(finish, &nodei);
+  Listener* listener = new Listener(finish, nodei);
 
   listener->Queue();
 
