@@ -85,10 +85,15 @@ Napi::Object listen(const Napi::CallbackInfo& info)
 {
   Napi::Env env = info.Env();
   Napi::Function emit = info[0].As<Napi::Function>();
+  Napi::Function finish = info[1].As<Napi::Function>();
   
   NodeInterface nodei = NodeInterface(&env, &emit);
 
-  TagManager::getInstance().listen(nodei);
+  // TagManager::getInstance().listen(nodei);
+
+  Listener* listener = new Listener(finish, &nodei);
+
+  listener->Queue();
 
   Napi::Object context = Napi::Object::New(env);
 
