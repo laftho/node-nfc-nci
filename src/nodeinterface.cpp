@@ -28,28 +28,42 @@ void NodeInterface::on(const Napi::CallbackInfo& info)
   auto callback = info[1].As<Napi::Function>();
   
   if ((std::string)event == "error") {
-    this->errorEnv = &env;
-    this->errorCallback = callback;
+    initOnError(&env, &callback);
   } else if((std::string)event == "arrived") {
-    this->tagArrivedEnv = &env;
-    this->tagArrivedCallback = callback;
+    initOnTagArrived(&env, &callback);
   } else if((std::string)event == "departed") {
-    this->tagDepartedEnv = &env;
-    this->tagDepartedCallback = callback;
+    initOnTagDeparted(&env, &callback);
   }
 }
 
+void NodeInterface::initOnError(Napi::Env *env, Napi::Function *callback)
+{
+  errorEnv = env;
+  errorCallback = callback;
+}
+
+void NodeInterface::initOnTagArrived(Napi::Env *env, Napi::Function *callback)
+{
+  tagArrivedEnv = env;
+  tagArrivedCallback = callback;
+}
+
+void NodeInterface::initOnTagDeparted(Napi::Env *env, Napi::Function *callback)
+{
+  tagDepartedEnv = env;
+  tagDepartedCallback = callback;
+}
 
 void NodeInterface::onError(std::string message)
 {
   Napi::String mesg = Napi::String::New(*errorEnv, message);
   
-  errorCallback.Call(errorEnv->Global(), { mesg });
+  errorCallback->Call(errorEnv->Global(), { mesg });
 }
 
 void NodeInterface::onTagDeparted()
 {
-  tagDepartedCallback.Call(tagDepartedEnv->Global(), {});
+  tagDepartedCallback->Call(tagDepartedEnv->Global(), {});
 }
 
 void NodeInterface::onTagArrived(Tag tag)
@@ -77,7 +91,7 @@ void NodeInterface::onTagArrived(Tag tag)
   ndef.Set("content", tag.ndef.content);
   tagInfo.Set("ndef", ndef);
   
-  tagArrivedCallback.Call(tagArrivedEnv->Global(), { tagInfo });
+  tagArrivedCallback->Call(tagArrivedEnv->Global(), { tagInfo });
 }
 void listen(const Napi::CallbackInfo& info)
 {
