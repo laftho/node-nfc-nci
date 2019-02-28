@@ -29,7 +29,7 @@ private:
 public:
   ~TagManager();
 
-  void listen(ITagManager& tagInterface);
+  void listen(ITagManager* tagInterface);
 
   void onTagArrival(nfc_tag_info_t *pTagInfo);
   void onTagDeparture(void);

@@ -18,9 +18,9 @@ TagManager::~TagManager() {
   Device::deinitialize();
 }
 
-void TagManager::listen(ITagManager& tagInterface)
+void TagManager::listen(ITagManager* tagInterface)
 {
-  this->tagInterface = &tagInterface;
+  this->tagInterface = tagInterface;
   
   Device::initialize();
   
