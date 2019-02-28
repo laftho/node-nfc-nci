@@ -8,11 +8,16 @@
 class NodeInterface: public ITagManager
 {
 private:
-  Napi::Env* env;
   Napi::Env* listenEnv;
   Napi::Function* listenCallback;
+  
+  Napi::Env* errorEnv;
   Napi::Function errorCallback;
+  
+  Napi::Env* tagArrivedEnv;
   Napi::Function tagArrivedCallback;
+  
+  Napi::Env* tagDepartedEnv;
   Napi::Function tagDepartedCallback;
 public:
   NodeInterface(Napi::Env* env, Napi::Function* callback);

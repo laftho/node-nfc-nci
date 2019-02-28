@@ -24,15 +24,17 @@ NodeInterface::~NodeInterface()
 void NodeInterface::on(const Napi::CallbackInfo& info)
 {
   auto env = info.Env();
-  this->env = &env;
   auto event = info[0].As<Napi::String>();
   auto callback = info[1].As<Napi::Function>();
   
   if ((std::string)event == "error") {
+    this->errorEnv = &env;
     this->errorCallback = callback;
   } else if((std::string)event == "arrived") {
+    this->tagArrivedEnv = &env;
     this->tagArrivedCallback = callback;
   } else if((std::string)event == "departed") {
+    this->tagDepartedEnv = &env;
     this->tagDepartedCallback = callback;
   }
 }
@@ -40,23 +42,23 @@ void NodeInterface::on(const Napi::CallbackInfo& info)
 
 void NodeInterface::onError(std::string message)
 {
-  Napi::String mesg = Napi::String::New(*env, message);
+  Napi::String mesg = Napi::String::New(*errorEnv, message);
   
-  errorCallback.Call(env->Global(), { mesg });
+  errorCallback.Call(errorEnv->Global(), { mesg });
 }
 
 void NodeInterface::onTagDeparted()
 {
-  tagDepartedCallback.Call(env->Global(), {});
+  tagDepartedCallback.Call(tagDepartedEnv->Global(), {});
 }
 
 void NodeInterface::onTagArrived(Tag tag)
 {
-  Napi::Object tagInfo = Napi::Object::New(*env);
+  Napi::Object tagInfo = Napi::Object::New(*tagArrivedEnv);
   
-  Napi::Object technology = Napi::Object::New(*env);
-  Napi::Object uid = Napi::Object::New(*env);
-  Napi::Object ndef = Napi::Object::New(*env);
+  Napi::Object technology = Napi::Object::New(*tagArrivedEnv);
+  Napi::Object uid = Napi::Object::New(*tagArrivedEnv);
+  Napi::Object ndef = Napi::Object::New(*tagArrivedEnv);
   
   technology.Set("code", tag.technology.code);
   technology.Set("name", tag.technology.name);
@@ -75,7 +77,7 @@ void NodeInterface::onTagArrived(Tag tag)
   ndef.Set("content", tag.ndef.content);
   tagInfo.Set("ndef", ndef);
   
-  tagArrivedCallback.Call(env->Global(), { tagInfo });
+  tagArrivedCallback.Call(tagArrivedEnv->Global(), { tagInfo });
 }
 void listen(const Napi::CallbackInfo& info)
 {
