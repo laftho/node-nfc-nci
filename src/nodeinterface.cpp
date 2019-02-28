@@ -4,16 +4,16 @@
 
 NodeInterface::NodeInterface(Napi::Env *env, Napi::Function *callback)
 {
-  this->env = env;
-  this->callback = callback;
-  
-  auto context = Napi::Object::New(*this->env);
+  this->listenEnv = env;
+  this->listenCallback = callback;
+
+  auto context = Napi::Object::New(*this->listenEnv);
   
   auto on = std::bind(&NodeInterface::on, this, std::placeholders::_1);
   
-  context.Set("on", Napi::Function::New(*this->env, on));
+  context.Set("on", Napi::Function::New(*this->listenEnv, on));
   
-  this->callback->Call(this->env->Global(), { context });
+  this->listenCallback->Call(this->listenEnv->Global(), { context });
 }
 
 NodeInterface::~NodeInterface()
@@ -23,6 +23,8 @@ NodeInterface::~NodeInterface()
 
 void NodeInterface::on(const Napi::CallbackInfo& info)
 {
+  auto env = info.Env();
+  this->env = &env;
   auto event = info[0].As<Napi::String>();
   auto callback = info[1].As<Napi::Function>();
   
