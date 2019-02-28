@@ -207,7 +207,7 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
             if (res >= 0x00)
             {
               tag.ndef.type = "Text";
-              tag.ndef.content = content;
+              tag.ndef.content = ((std::string)content).substr(0, res);
             } else {
               tagInterface->onError("NDEF read text error");
             }
