@@ -87,7 +87,7 @@ Napi::Object listen(const Napi::CallbackInfo& info)
   Napi::Function emit = info[0].As<Napi::Function>();
   Napi::Function finish = info[1].As<Napi::Function>();
   
-  NodeInterface nodei = NodeInterface(&env, &emit);
+  nodei = NodeInterface(&env, &emit);
 
   // TagManager::getInstance().listen(nodei);
 

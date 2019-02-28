@@ -48,4 +48,6 @@ public:
   void onError(std::string message);
 };
 
+extern NodeInterface nodei;
+
 #endif // NODE_NFC_NCI_NODEINTERFACE_H
