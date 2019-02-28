@@ -1,58 +1,27 @@
-#ifndef TAGMANAGER_H
-#define TAGMANAGER_H
+#ifndef NODE_NFC_NCI_TAGMANAGER_H
+#define NODE_NFC_NCI_TAGMANAGER_H
 
 #include <string>
 #include <exception>
 #include <linux_nfc_api.h>
-
-class TagTechnology
-{
-public:
-  std::string name;
-  std::string type;
-  unsigned int code;
-};
-
-class TagUid
-{
-public:
-  std::string id;
-  std::string type;
-  unsigned int length;
-};
-
-class TagNDEF
-{
-public:
-  TagNDEF();
-  unsigned int size;
-  unsigned int length;
-  unsigned int read;
-  bool writeable;
-  std::string type;
-  std::string content;
-};
-
-class Tag
-{
-public:
-  TagTechnology technology;
-  TagUid uid;
-  TagNDEF ndef;
-};
+#include "tag.h"
 
 class ITagManager {
 public:
-  virtual void onTagArrived(Tag tag) = 0;
+  virtual void onTagArrived(Tag::Tag tag) = 0;
   virtual void onTagDeparted() = 0;
   virtual void onError(std::string message) = 0;
+  virtual void onTagWritten(Tag::Tag tag) = 0;
 };
 
 class TagManager
 {
 private:
   ITagManager* tagInterface;
-  
+
+  bool hasNextWriteNDEF = false;
+  Tag::TagNDEF nextWriteNDEF;
+
   TagManager();
   
   TagManager(TagManager const&);
@@ -64,7 +33,9 @@ public:
 
   void onTagArrival(nfc_tag_info_t *pTagInfo);
   void onTagDeparture(void);
-    
+
+  void setWrite(Tag::TagNDEF ndef);
+
   void onDeviceArrival(void);
   void onDeviceDeparture(void);
   void onMessageReceived(unsigned char *message, unsigned int length);
@@ -75,4 +46,4 @@ public:
   static TagManager& getInstance();
 };
 
-#endif // TAGMANAGER_H
+#endif // NODE_NFC_NCI_TAGMANAGER_H

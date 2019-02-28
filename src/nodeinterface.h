@@ -1,9 +1,10 @@
-#ifndef NODEINTERFACE_H
-#define NODEINTERFACE_H
+#ifndef NODE_NFC_NCI_NODEINTERFACE_H
+#define NODE_NFC_NCI_NODEINTERFACE_H
 
 #include <string>
 #include "napi.h"
 #include "tagmanager.h"
+#include "tag.h"
 
 class NodeInterface: public ITagManager
 {
@@ -14,9 +15,13 @@ public:
   NodeInterface(Napi::Env* env, Napi::Function* callback);
   ~NodeInterface();
 
-  void onTagArrived(Tag tag);
+  void write(const Napi::CallbackInfo& info);
+  Napi::Object asNapiObjectTag(Tag::Tag tag);
+
+  void onTagArrived(Tag::Tag tag);
   void onTagDeparted();
+  void onTagWritten(Tag::Tag tag);
   void onError(std::string message);
 };
 
-#endif // NODEINTERFACE_H
+#endif // NODE_NFC_NCI_NODEINTERFACE_H

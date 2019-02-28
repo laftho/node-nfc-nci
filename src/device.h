@@ -1,5 +1,5 @@
-#ifndef DEVICE_H
-#define DEVICE_H
+#ifndef NODE_NFC_NCI_DEVICE_H
+#define NODE_NFC_NCI_DEVICE_H
 
 #include <exception>
 #include <linux_nfc_api.h>
@@ -46,4 +46,4 @@ namespace Device {
   void onMessageReceived(unsigned char *message, unsigned int length);
 }
 
-#endif
+#endif // NODE_NFC_NCI_DEVICE_H

@@ -1,20 +1,9 @@
 #include <string.h>
-#include <sstream>
-#include <iomanip>
-
-#include <unistd.h>
 
 #include <linux_nfc_api.h>
 
 #include "tagmanager.h"
 #include "device.h"
-
-TagNDEF::TagNDEF()
-{
-  size = 0;
-  length = 0;
-  writeable = false;
-}
 
 TagManager& TagManager::getInstance()
 {
@@ -61,217 +50,51 @@ void TagManager::listen(ITagManager& tagInterface)
   };
 }
 
+void TagManager::setWrite(Tag::TagNDEF ndef) {
+
+  Device::mutex.Lock();
+
+  if (Device::State::TAG_ARRIVED && hasNextWriteNDEF != true) {
+    nfc_tag_info_t tagInfo;
+
+    memcpy(&tagInfo, &Device::tagInfo, sizeof(nfc_tag_info_t));
+    Tag::Tag tag = Tag::readTag(&tagInfo);
+
+    tag.ndefWritten = Tag::TagNDEFWritten();
+
+    tag.ndefWritten.written = Tag::writeTagNdef(&tagInfo, nextWriteNDEF);
+    tag.ndefWritten.previous = tag.ndef;
+    tag.ndefWritten.updated = Tag::readTagNDEF(&tagInfo);
+
+    tagInterface->onTagWritten(tag);
+  } else {
+    nextWriteNDEF = ndef;
+    hasNextWriteNDEF = true;
+  }
+
+  Device::mutex.Unlock();
+}
+
 void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
 {
   nfc_tag_info_t tagInfo;
   
   memcpy(&tagInfo, pTagInfo, sizeof(nfc_tag_info_t));
-  
-  Tag tag;
-  
-  tag.technology = TagTechnology();
-  tag.technology.code = tagInfo.technology;
-  
-  switch(tag.technology.code) {
-    case TARGET_TYPE_ISO14443_3A:
-    {
-      tag.technology.name = "Type A";
-      tag.technology.type = "ISO14443_3A";
-    } break;
-    case TARGET_TYPE_ISO14443_3B:
-    {
-      tag.technology.name = "Type 4B";
-      tag.technology.type = "ISO14443_3B";
-    } break;
-    case TARGET_TYPE_ISO14443_4:
-    {
-      tag.technology.name = "Type 4A";
-      tag.technology.type = "ISO14443_4";
-    } break;
-    case TARGET_TYPE_FELICA:
-    {
-      tag.technology.name = "Type F";
-      tag.technology.type = "FELICA";
-    } break;
-    case TARGET_TYPE_ISO15693:
-    {
-      tag.technology.name = "Type V";
-      tag.technology.type = "ISO15693";
-    } break;
-    case TARGET_TYPE_NDEF:
-    {
-      tag.technology.name = "NDEF";
-      tag.technology.type = "NDEF";
-    } break;
-    case TARGET_TYPE_NDEF_FORMATABLE:
-    {
-      tag.technology.name = "Formatable";
-      tag.technology.type = "NDEF_FORMATABLE";
-    } break;
-    case TARGET_TYPE_MIFARE_CLASSIC:
-    {
-      tag.technology.name = "Type A - Mifare Classic";
-      tag.technology.type = "MIFARE_CLASSIC";
-    } break;
-    case TARGET_TYPE_MIFARE_UL:
-    {
-      tag.technology.name = "Type A - Mifare Ul";
-      tag.technology.type = "MIFARE_UL";
-    } break;
-    case TARGET_TYPE_KOVIO_BARCODE:
-    {
-      tag.technology.name = "Type A - Kovio Barcode";
-      tag.technology.type = "KOVIO_BARCODE";
-    } break;
-    case TARGET_TYPE_ISO14443_3A_3B:
-    {
-      tag.technology.name = "Type A/B";
-      tag.technology.type = "ISO14443_3A_3B";
-    } break;
-    default:
-    {
-      tag.technology.name = "Unknown or not supported";
-      tag.technology.type = "UNKNOWN";
-    } break;
-  }
-  
-  tag.uid = TagUid();
-  tag.uid.length = tagInfo.uid_length;
-  
-  if (tag.uid.length != 0x00 && tag.uid.length <= 32)
-  {
-    switch(tag.uid.length) {
-      case 4:
-      case 7:
-      case 10:
-        tag.uid.type = "NFCID1";
-        break;
-      case 8:
-        tag.uid.type = "NFCID2";
-        break;
-      default:
-        tag.uid.type = "UID";
-        break;
-    }
-    
-    std::ostringstream oss;
-    oss << std::setfill('0');
-    
-    for(unsigned int i = 0x00; i < tagInfo.uid_length; i++)
-    {
-        oss << std::setw(2) << std::hex << static_cast< int >( tagInfo.uid[i] );
-        
-        if (i < tagInfo.uid_length - 1) {
-            oss << ":";
-        }
-    }
-    
-    tag.uid.id.assign(oss.str());
-  }
-  
-  ndef_info_t ndefInfo;
-  
-  unsigned int res = 0x00;
-  
-  res = nfcTag_isNdef(tagInfo.handle, &ndefInfo);
-  
-  if (res == 0x01) {
-    
-    tag.ndef = TagNDEF();
-    
-    if (ndefInfo.is_ndef) {
-      tag.ndef.size = ndefInfo.max_ndef_length;
-      tag.ndef.length = ndefInfo.current_ndef_length;
-      tag.ndef.writeable = (bool)ndefInfo.is_writable;
-      
-      unsigned char* ndefContent = (unsigned char*)malloc(ndefInfo.current_ndef_length * sizeof(unsigned char));
-      
-      nfc_friendly_type_t lNDEFType = NDEF_FRIENDLY_TYPE_OTHER;
-      
-      res = nfcTag_readNdef(tagInfo.handle, ndefContent, ndefInfo.current_ndef_length, &lNDEFType);
-      
-      if (res != ndefInfo.current_ndef_length)
-      {
-        tagInterface->onError("NDEF failed to read all data requested");
-      } else {
-        switch(lNDEFType)
-        {
-          case NDEF_FRIENDLY_TYPE_TEXT:
-          {
-            char* content = NULL;
-            
-            content = (char*)malloc(res * sizeof(char));
-            res = ndef_readText(ndefContent, res, content, res);
+  Tag::Tag tag = Tag::readTag(&tagInfo);
 
-            tag.ndef.read = res;
-            if (res >= 0x00)
-            {
-              tag.ndef.type = "Text";
-              tag.ndef.content = ((std::string)content).substr(0, res);
-            } else {
-              tagInterface->onError("NDEF read text error");
-            }
-            
-            if (content != NULL)
-            {
-              free(content);
-              content = NULL;
-            }
-          } break;
-          case NDEF_FRIENDLY_TYPE_URL:
-          {
-            char* content = NULL;
-            
-            content = (char*)malloc(res * sizeof(char));
-            res = ndef_readUrl(ndefContent, res, content, res);
-            tag.ndef.read = res;
-
-            if (res >= 0x00)
-            {
-              tag.ndef.type = "URI";
-              tag.ndef.content = content;
-            } else {
-              tagInterface->onError("NDEF read url error");
-            }
-            
-            if (content != NULL)
-            {
-              free(content);
-              content = NULL;
-            }
-          } break;
-          case NDEF_FRIENDLY_TYPE_HR:
-          {
-            tag.ndef.type = "Handover Request";
-            tag.ndef.read = 0;
-          } break;
-          case NDEF_FRIENDLY_TYPE_HS:
-          {
-            tag.ndef.type = "Handover Select";
-            tag.ndef.read = 0;
-          } break;
-          case NDEF_FRIENDLY_TYPE_OTHER:
-          {
-            tag.ndef.type = "OTHER";
-            tag.ndef.read = 0;
-          } break;
-          default:
-          {
-            tag.ndef.type = "UNKNOWN";
-            tag.ndef.read = 0;
-          } break;
-        }
-      }
-      
-      if (ndefContent != NULL)
-      {
-        free(ndefContent);
-        ndefContent = NULL;
-      }
-    }
-  }
-  
   tagInterface->onTagArrived(tag);
+
+  if (hasNextWriteNDEF) {
+    tag.ndefWritten = Tag::TagNDEFWritten();
+
+    tag.ndefWritten.written = Tag::writeTagNdef(&tagInfo, nextWriteNDEF);
+    tag.ndefWritten.previous = tag.ndef;
+    tag.ndefWritten.updated = Tag::readTagNDEF(&tagInfo);
+
+    hasNextWriteNDEF = false;
+
+    tagInterface->onTagWritten(tag);
+  }
 }
 
 void TagManager::onTagDeparture()

@@ -1,5 +1,5 @@
-#ifndef MUTEX_H
-#define MUTEX_H
+#ifndef NODE_NFC_NCI_MUTEX_H
+#define NODE_NFC_NCI_MUTEX_H
 
 #include <pthread.h>
 
@@ -19,4 +19,4 @@ public:
   void Notify(bool needLock);
 };
 
-#endif // MUTEX_H
+#endif // NODE_NFC_NCI_MUTEX_H
