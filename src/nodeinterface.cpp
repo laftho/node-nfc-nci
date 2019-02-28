@@ -45,6 +45,7 @@ void NodeInterface::onTagArrived(Tag tag)
   
   ndef.Set("size", tag.ndef.size);
   ndef.Set("length", tag.ndef.length);
+  ndef.Set("read", tag.ndef.read);
   ndef.Set("writeable", tag.ndef.writeable);
   ndef.Set("type", tag.ndef.type);
   ndef.Set("content", tag.ndef.content);

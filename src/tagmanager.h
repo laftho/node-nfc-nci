@@ -27,6 +27,7 @@ public:
   TagNDEF();
   unsigned int size;
   unsigned int length;
+  unsigned int read;
   bool writeable;
   std::string type;
   std::string content;

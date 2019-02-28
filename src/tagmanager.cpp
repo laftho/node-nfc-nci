@@ -202,7 +202,8 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
             
             content = (char*)malloc(res * sizeof(char));
             res = ndef_readText(ndefContent, res, content, res);
-            
+
+            tag.ndef.read = res;
             if (res >= 0x00)
             {
               tag.ndef.type = "Text";
@@ -223,7 +224,8 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
             
             content = (char*)malloc(res * sizeof(char));
             res = ndef_readUrl(ndefContent, res, content, res);
-            
+            tag.ndef.read = res;
+
             if (res >= 0x00)
             {
               tag.ndef.type = "URI";
@@ -241,18 +243,22 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
           case NDEF_FRIENDLY_TYPE_HR:
           {
             tag.ndef.type = "Handover Request";
+            tag.ndef.read = 0;
           } break;
           case NDEF_FRIENDLY_TYPE_HS:
           {
             tag.ndef.type = "Handover Select";
+            tag.ndef.read = 0;
           } break;
           case NDEF_FRIENDLY_TYPE_OTHER:
           {
             tag.ndef.type = "OTHER";
+            tag.ndef.read = 0;
           } break;
           default:
           {
             tag.ndef.type = "UNKNOWN";
+            tag.ndef.read = 0;
           } break;
         }
       }
