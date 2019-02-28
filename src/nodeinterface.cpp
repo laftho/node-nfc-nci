@@ -91,7 +91,7 @@ Napi::Object listen(const Napi::CallbackInfo& info)
 
   // TagManager::getInstance().listen(nodei);
 
-  Listener* listener = new Listener(finish, &nodei);
+  Listener* listener = new Listener(finish, nodei);
 
   listener->Queue();
 

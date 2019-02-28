@@ -9,16 +9,16 @@
 
 class Listener: public Napi::AsyncWorker {
 private:
-  ITagManager* nodei;
+  ITagManager& nodei;
   std::string error;
 public:
-  Listener(Napi::Function& callback, ITagManager* nodei)
+  Listener(Napi::Function& callback, ITagManager& nodei)
   : Napi::AsyncWorker(callback), nodei(nodei) {}
 
   ~Listener() {}
   void Execute() {
     try {
-      TagManager::getInstance().listen(*nodei);
+      TagManager::getInstance().listen(nodei);
     } catch(std::exception* e) {
       error = e->what();
     }
