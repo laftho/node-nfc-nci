@@ -61,14 +61,24 @@ extern NodeInterface* nodei;
 class Event: public Napi::AsyncWorker {
 private:
   Mutex* mutex;
+  bool* trigger;
   std::function<void(Napi::Env*, Napi::FunctionReference*)> handler;
 public:
-  Event(Napi::Function& callback, Mutex* mutex, std::function<void(Napi::Env*, Napi::FunctionReference*)> handler)
-          : Napi::AsyncWorker(callback), mutex(mutex), handler(handler) {}
+  Event(Napi::Function& callback, Mutex* mutex, bool* trigger, std::function<void(Napi::Env*, Napi::FunctionReference*)> handler)
+          : Napi::AsyncWorker(callback), mutex(mutex), trigger(trigger), handler(handler) {}
 
   ~Event() {}
   void Execute() {
-    mutex->Wait(true);
+    bool cont;
+    do {
+      mutex->Lock();
+
+      cont = *trigger;
+
+      mutex->Wait(false);
+
+      mutex->Unlock();
+    } while(!cont);
   }
 
   void OnOk() {

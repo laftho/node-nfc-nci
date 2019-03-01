@@ -3,15 +3,20 @@
 #include "nodeinterface.h"
 
 NodeInterface* nodei;
+
+bool hasTag = false;
 Mutex* onTagArrivedMutex;
 Event* onTagArrivedEvent;
 
+bool hasWritten = false;
 Mutex* onTagWrittenMutex;
 Event* onTagWrittenEvent;
 
+bool hasDeparted = false;
 Mutex* onTagDepartedMutex;
 Event* onTagDepartedEvent;
 
+bool hasErrored = false;
 Mutex* onErrorMutex;
 Event* onErrorEvent;
 
@@ -30,6 +35,7 @@ void NodeInterface::onError(std::string message)
 {
   onErrorMutex->Lock();
 
+  hasErrored = true;
   error = message;
 
   onErrorMutex->Notify(false);
@@ -46,7 +52,12 @@ void NodeInterface::handleOnError(Napi::Env *env, Napi::FunctionReference *func)
 
 void NodeInterface::onTagDeparted()
 {
-  onTagDepartedMutex->Notify(true);
+  onTagDepartedMutex->Lock();
+
+  hasDeparted = true;
+  onTagDepartedMutex->Notify(false);
+
+  onTagDepartedMutex->Unlock();
 }
 
 void NodeInterface::handleOnTagDeparted(Napi::Env *env, Napi::FunctionReference *func)
@@ -94,6 +105,7 @@ void NodeInterface::onTagArrived(Tag::Tag tag)
   onTagWrittenMutex->Lock();
   onTagArrivedMutex->Lock();
 
+  hasTag = true;
   this->tag = &tag;
 
   onTagArrivedMutex->Notify(false);
@@ -114,6 +126,7 @@ void NodeInterface::onTagWritten(Tag::Tag tag)
   onTagArrivedMutex->Lock();
   onTagWrittenMutex->Lock();
 
+  hasWritten = true;
   this->tag = &tag;
 
   onTagWrittenMutex->Notify(false);
@@ -148,22 +161,22 @@ Napi::Object listen(const Napi::CallbackInfo& info)
 
   onTagArrivedMutex = new Mutex();
   auto tagArrivedHandler = std::bind(&NodeInterface::handleOnTagArrived, nodei, std::placeholders::_1, std::placeholders::_2);
-  onTagArrivedEvent = new Event(emit, onTagArrivedMutex, tagArrivedHandler);
+  onTagArrivedEvent = new Event(emit, onTagArrivedMutex, &hasTag, tagArrivedHandler);
   onTagArrivedEvent->Queue();
 
   onTagWrittenMutex = new Mutex();
   auto tagWrittenHandler = std::bind(&NodeInterface::handleOnTagWritten, nodei, std::placeholders::_1, std::placeholders::_2);
-  onTagWrittenEvent = new Event(emit, onTagWrittenMutex, tagWrittenHandler);
+  onTagWrittenEvent = new Event(emit, onTagWrittenMutex, &hasWritten, tagWrittenHandler);
   onTagWrittenEvent->Queue();
 
   onTagDepartedMutex = new Mutex();
   auto tagDepartedHandler = std::bind(&NodeInterface::handleOnTagDeparted, nodei, std::placeholders::_1, std::placeholders::_2);
-  onTagDepartedEvent = new Event(emit, onTagDepartedMutex, tagDepartedHandler);
+  onTagDepartedEvent = new Event(emit, onTagDepartedMutex, &hasDeparted, tagDepartedHandler);
   onTagDepartedEvent->Queue();
 
   onErrorMutex = new Mutex();
   auto errorHandler = std::bind(&NodeInterface::handleOnError, nodei, std::placeholders::_1, std::placeholders::_2);
-  onErrorEvent = new Event(emit, onErrorMutex, errorHandler);
+  onErrorEvent = new Event(emit, onErrorMutex, &hasErrored, errorHandler);
   // onErrorEvent->Queue();
 
   // TagManager::getInstance().listen(nodei);
