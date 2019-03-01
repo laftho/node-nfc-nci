@@ -91,7 +91,7 @@ void NodeInterface::handleOnTagDeparted(Napi::Env *env, Napi::FunctionReference 
 
   func->Call({ Napi::String::New(*env, "departed") });
 
-  onTagDepartedEvent->Queue();
+  // onTagDepartedEvent->Queue();
 }
 
 Napi::Object NodeInterface::asNapiObjectTag(Napi::Env* env, Tag::Tag tag)
@@ -156,7 +156,7 @@ void NodeInterface::handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* 
 
   func->Call({ Napi::String::New(*env, "arrived"), tagInfo });
 
-  onTagArrivedEvent->Queue();
+  // onTagArrivedEvent->Queue();
 }
 
 void NodeInterface::onTagWritten(Tag::Tag tag)
