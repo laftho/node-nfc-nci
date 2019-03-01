@@ -46,10 +46,10 @@ public:
   void write(const Napi::CallbackInfo& info);
   Napi::Object asNapiObjectTag(Napi::Env* env, Tag::Tag tag);
 
-  void handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* func);
-  void handleOnTagDeparted(Napi::Env* env, Napi::FunctionReference* func);
-  void handleOnTagWritten(Napi::Env* env, Napi::FunctionReference* func);
-  void handleOnError(Napi::Env* env, Napi::FunctionReference* func);
+  void handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* func, std::string error);
+  void handleOnTagDeparted(Napi::Env* env, Napi::FunctionReference* func, std::string error);
+  void handleOnTagWritten(Napi::Env* env, Napi::FunctionReference* func, std::string error);
+  void handleOnError(Napi::Env* env, Napi::FunctionReference* func, std::string error);
   void onTagArrived(Tag::Tag tag);
   void onTagDeparted();
   void onTagWritten(Tag::Tag tag);
@@ -62,9 +62,9 @@ class Event: public Napi::AsyncWorker {
 private:
   Mutex* mutex;
   bool* trigger;
-  std::function<void(Napi::Env*, Napi::FunctionReference*)> handler;
+  std::function<void(Napi::Env*, Napi::FunctionReference*, std::string)> handler;
 public:
-  Event(Napi::Function& callback, Mutex* mutex, bool* trigger, std::function<void(Napi::Env*, Napi::FunctionReference*)> handler)
+  Event(Napi::Function& callback, Mutex* mutex, bool* trigger, std::function<void(Napi::Env*, Napi::FunctionReference*, std::string)> handler)
           : Napi::AsyncWorker(callback), mutex(mutex), trigger(trigger), handler(handler) {}
 
   ~Event() {}
@@ -85,7 +85,7 @@ public:
     Napi::Env env = Env();
     Napi::HandleScope scope(env);
 
-    handler(&env, &Callback());
+    handler(&env, &Callback(), NULL);
 
     // Napi::HandleScope scope(Env());
 
@@ -95,6 +95,14 @@ public:
 
     // Callback().Call({ Napi::String::New(Env(), "arrived"), tagInfo });
     // nodei->pOnTagArrived();
+  }
+
+  void OnError(const Napi::Error& e)
+  {
+    Napi::Env env = Env();
+    Napi::HandleScope scope(env);
+
+    handler(&env, &Callback(), e.Message());
   }
 };
 

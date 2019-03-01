@@ -43,9 +43,15 @@ void NodeInterface::onError(std::string message)
   onErrorMutex->Unlock();
 }
 
-void NodeInterface::handleOnError(Napi::Env *env, Napi::FunctionReference *func)
+void NodeInterface::handleOnError(Napi::Env *env, Napi::FunctionReference *func, std::string error)
 {
-  Napi::String mesg = Napi::String::New(*env, error);
+  std::string msg = this->error;
+
+  if (!error.empty()) {
+    msg = error;
+  }
+
+  Napi::String mesg = Napi::String::New(*env, msg);
 
   func->Call({ Napi::String::New(*env, "error"), mesg });
 }
@@ -60,8 +66,16 @@ void NodeInterface::onTagDeparted()
   onTagDepartedMutex->Unlock();
 }
 
-void NodeInterface::handleOnTagDeparted(Napi::Env *env, Napi::FunctionReference *func)
+void NodeInterface::handleOnTagDeparted(Napi::Env *env, Napi::FunctionReference *func, std::string error)
 {
+  if (!error.empty()) {
+    Napi::String mesg = Napi::String::New(*env, error);
+
+    func->Call({ Napi::String::New(*env, "error"), mesg });
+
+    return;
+  }
+
   func->Call({ Napi::String::New(*env, "departed") });
 }
 
@@ -114,8 +128,16 @@ void NodeInterface::onTagArrived(Tag::Tag tag)
   onTagWrittenMutex->Unlock();
 }
 
-void NodeInterface::handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* func)
+void NodeInterface::handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* func, std::string error)
 {
+  if (!error.empty()) {
+    Napi::String mesg = Napi::String::New(*env, error);
+
+    func->Call({ Napi::String::New(*env, "error"), mesg });
+
+    return;
+  }
+
   Napi::Object tagInfo = asNapiObjectTag(env, *tag);
 
   func->Call({ Napi::String::New(*env, "arrived"), tagInfo });
@@ -134,7 +156,15 @@ void NodeInterface::onTagWritten(Tag::Tag tag)
   onTagArrivedMutex->Unlock();
 }
 
-void NodeInterface::handleOnTagWritten(Napi::Env *env, Napi::FunctionReference *func) {
+void NodeInterface::handleOnTagWritten(Napi::Env *env, Napi::FunctionReference *func, std::string error) {
+  if (!error.empty()) {
+    Napi::String mesg = Napi::String::New(*env, error);
+
+    func->Call({ Napi::String::New(*env, "error"), mesg });
+
+    return;
+  }
+
   Napi::Object tagInfo = asNapiObjectTag(env, *tag);
 
   func->Call({ Napi::String::New(*env, "written"), tagInfo });
@@ -160,22 +190,22 @@ Napi::Object listen(const Napi::CallbackInfo& info)
   nodei = new NodeInterface(&env, &emit);
 
   onTagArrivedMutex = new Mutex();
-  auto tagArrivedHandler = std::bind(&NodeInterface::handleOnTagArrived, nodei, std::placeholders::_1, std::placeholders::_2);
+  auto tagArrivedHandler = std::bind(&NodeInterface::handleOnTagArrived, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
   onTagArrivedEvent = new Event(emit, onTagArrivedMutex, &hasTag, tagArrivedHandler);
   onTagArrivedEvent->Queue();
 
   onTagWrittenMutex = new Mutex();
-  auto tagWrittenHandler = std::bind(&NodeInterface::handleOnTagWritten, nodei, std::placeholders::_1, std::placeholders::_2);
+  auto tagWrittenHandler = std::bind(&NodeInterface::handleOnTagWritten, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
   onTagWrittenEvent = new Event(emit, onTagWrittenMutex, &hasWritten, tagWrittenHandler);
   onTagWrittenEvent->Queue();
 
   onTagDepartedMutex = new Mutex();
-  auto tagDepartedHandler = std::bind(&NodeInterface::handleOnTagDeparted, nodei, std::placeholders::_1, std::placeholders::_2);
+  auto tagDepartedHandler = std::bind(&NodeInterface::handleOnTagDeparted, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
   onTagDepartedEvent = new Event(emit, onTagDepartedMutex, &hasDeparted, tagDepartedHandler);
   onTagDepartedEvent->Queue();
 
   onErrorMutex = new Mutex();
-  auto errorHandler = std::bind(&NodeInterface::handleOnError, nodei, std::placeholders::_1, std::placeholders::_2);
+  auto errorHandler = std::bind(&NodeInterface::handleOnError, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
   onErrorEvent = new Event(emit, onErrorMutex, &hasErrored, errorHandler);
   // onErrorEvent->Queue();
 
