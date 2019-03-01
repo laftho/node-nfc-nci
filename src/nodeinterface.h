@@ -25,10 +25,8 @@ public:
     }
   }
 
-  void OnOK() {
-    Napi::HandleScope scope(Env());
-    Callback().Call({ Env().Null(), Napi::String::New(Env(), error) });
-  }
+  void OnOK();
+  void OnError();
 };
 
 class NodeInterface: public ITagManager
@@ -61,42 +59,49 @@ extern NodeInterface* nodei;
 class Event: public Napi::AsyncWorker {
 private:
   Mutex* mutex;
-  bool* trigger;
+  bool trigger = false;
+  std::string perror;
   std::function<void(Napi::Env*, Napi::FunctionReference*, std::string)> handler;
 public:
-  Event(Napi::Function& callback, Mutex* mutex, bool* trigger, std::function<void(Napi::Env*, Napi::FunctionReference*, std::string)> handler)
-          : Napi::AsyncWorker(callback), mutex(mutex), trigger(trigger), handler(handler) {}
+  Event(Napi::Function& callback, std::function<void(Napi::Env*, Napi::FunctionReference*, std::string)> handler)
+          : Napi::AsyncWorker(callback), handler(handler) {
+    mutex = new Mutex();
+  }
 
   ~Event() {}
   void Execute() {
-    bool cont;
     do {
-      mutex->Lock();
+      mutex->Wait(true);
+    } while(!trigger);
+  }
 
-      mutex->Wait(false);
+  int Lock() {
+    return mutex->Lock();
+  }
 
-      cont = *trigger;
+  int Unlock() {
+    return mutex->Unlock();
+  }
 
-      mutex->Unlock();
-    } while(!cont);
+  void Notify(bool needsLock) {
+    trigger = true;
+    mutex->Notify(needsLock);
+  }
+
+  void Terminate(std::string error) {
+    Lock();
+    perror = error;
+    Notify(false);
+    Unlock();
   }
 
   void OnOK() {
     Napi::Env env = Env();
     Napi::HandleScope scope(env);
 
-    std::string error;
+    std::string error = perror;
 
     handler(&env, &Callback(), error);
-
-    // Napi::HandleScope scope(Env());
-
-    // Callback().Call({ Env().Null() });
-
-    // Napi::Object tagInfo = nodei->asNapiObjectTag(*nodei->tag);
-
-    // Callback().Call({ Napi::String::New(Env(), "arrived"), tagInfo });
-    // nodei->pOnTagArrived();
   }
 
   void OnError(const Napi::Error& e)

@@ -4,21 +4,36 @@
 
 NodeInterface* nodei;
 
-bool hasTag = false;
-Mutex* onTagArrivedMutex;
 Event* onTagArrivedEvent;
-
-bool hasWritten = false;
-Mutex* onTagWrittenMutex;
 Event* onTagWrittenEvent;
-
-bool hasDeparted = false;
-Mutex* onTagDepartedMutex;
 Event* onTagDepartedEvent;
-
-bool hasErrored = false;
-Mutex* onErrorMutex;
 Event* onErrorEvent;
+
+void Listener::OnOK() {
+  Napi::HandleScope scope(Env());
+
+  if (!error.empty()) {
+    onTagArrivedEvent->Terminate(error);
+    onTagDepartedEvent->Terminate(error);
+    onTagWrittenEvent->Terminate(error);
+    onErrorEvent->Terminate(error);
+  }
+
+  Callback().Call({ Env().Null(), Napi::String::New(Env(), error) });
+}
+
+void Listener::OnError() {
+  Napi::HandleScope scope(Env());
+
+  if (!error.empty()) {
+    onTagArrivedEvent->Terminate(error);
+    onTagDepartedEvent->Terminate(error);
+    onTagWrittenEvent->Terminate(error);
+    onErrorEvent->Terminate(error);
+  }
+
+  Callback().Call({ Env().Null(), Napi::String::New(Env(), error) });
+}
 
 NodeInterface::NodeInterface(Napi::Env *env, Napi::Function *callback)
 {
@@ -33,37 +48,37 @@ NodeInterface::~NodeInterface()
 
 void NodeInterface::onError(std::string message)
 {
-  onErrorMutex->Lock();
+  onErrorEvent->Lock();
 
-  hasErrored = true;
   error = message;
 
-  onErrorMutex->Notify(false);
+  onErrorEvent->Notify(false);
 
-  onErrorMutex->Unlock();
+  onErrorEvent->Unlock();
 }
 
 void NodeInterface::handleOnError(Napi::Env *env, Napi::FunctionReference *func, std::string error)
 {
-  std::string msg = this->error;
+  if (!error.empty()) { // fatal
+    Napi::String mesg = Napi::String::New(*env, error);
 
-  if (!error.empty()) {
-    msg = error;
+    func->Call({ Napi::String::New(*env, "error"), mesg });
+
+    return;
   }
 
-  Napi::String mesg = Napi::String::New(*env, msg);
+  Napi::String mesg = Napi::String::New(*env, this->error);
 
   func->Call({ Napi::String::New(*env, "error"), mesg });
+
+  auto errorHandler = std::bind(&NodeInterface::handleOnError, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+  onErrorEvent = new Event(*emit, errorHandler);
+  onErrorEvent->Queue();
 }
 
 void NodeInterface::onTagDeparted()
 {
-  onTagDepartedMutex->Lock();
-
-  hasDeparted = true;
-  onTagDepartedMutex->Notify(false);
-
-  onTagDepartedMutex->Unlock();
+  onTagDepartedEvent->Notify(true);
 }
 
 void NodeInterface::handleOnTagDeparted(Napi::Env *env, Napi::FunctionReference *func, std::string error)
@@ -77,6 +92,10 @@ void NodeInterface::handleOnTagDeparted(Napi::Env *env, Napi::FunctionReference 
   }
 
   func->Call({ Napi::String::New(*env, "departed") });
+
+  auto tagDepartedHandler = std::bind(&NodeInterface::handleOnTagDeparted, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+  onTagDepartedEvent = new Event(*emit, tagDepartedHandler);
+  onTagDepartedEvent->Queue();
 }
 
 Napi::Object NodeInterface::asNapiObjectTag(Napi::Env* env, Tag::Tag tag)
@@ -116,16 +135,15 @@ void NodeInterface::onTagArrived(Tag::Tag tag)
   
   //emit->Call({ Napi::String::New(*env, "arrived"), tagInfo });
 
-  onTagWrittenMutex->Lock();
-  onTagArrivedMutex->Lock();
+  onTagWrittenEvent->Lock();
+  onTagArrivedEvent->Lock();
 
-  hasTag = true;
   this->tag = &tag;
 
-  onTagArrivedMutex->Notify(false);
+  onTagArrivedEvent->Notify(false);
 
-  onTagArrivedMutex->Unlock();
-  onTagWrittenMutex->Unlock();
+  onTagArrivedEvent->Unlock();
+  onTagWrittenEvent->Unlock();
 }
 
 void NodeInterface::handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* func, std::string error)
@@ -141,19 +159,22 @@ void NodeInterface::handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* 
   Napi::Object tagInfo = asNapiObjectTag(env, *tag);
 
   func->Call({ Napi::String::New(*env, "arrived"), tagInfo });
+
+  auto tagArrivedHandler = std::bind(&NodeInterface::handleOnTagArrived, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+  onTagArrivedEvent = new Event(*emit, tagArrivedHandler);
+  onTagArrivedEvent->Queue();
 }
 
 void NodeInterface::onTagWritten(Tag::Tag tag)
 {
-  onTagArrivedMutex->Lock();
-  onTagWrittenMutex->Lock();
+  onTagArrivedEvent->Lock();
+  onTagWrittenEvent->Lock();
 
-  hasWritten = true;
   this->tag = &tag;
 
-  onTagWrittenMutex->Notify(false);
-  onTagWrittenMutex->Unlock();
-  onTagArrivedMutex->Unlock();
+  onTagWrittenEvent->Notify(false);
+  onTagWrittenEvent->Unlock();
+  onTagArrivedEvent->Unlock();
 }
 
 void NodeInterface::handleOnTagWritten(Napi::Env *env, Napi::FunctionReference *func, std::string error) {
@@ -168,6 +189,10 @@ void NodeInterface::handleOnTagWritten(Napi::Env *env, Napi::FunctionReference *
   Napi::Object tagInfo = asNapiObjectTag(env, *tag);
 
   func->Call({ Napi::String::New(*env, "written"), tagInfo });
+
+  auto tagWrittenHandler = std::bind(&NodeInterface::handleOnTagWritten, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+  onTagWrittenEvent = new Event(*emit, tagWrittenHandler);
+  onTagWrittenEvent->Queue();
 }
 
 void NodeInterface::write(const Napi::CallbackInfo& info) {
@@ -189,24 +214,20 @@ Napi::Object listen(const Napi::CallbackInfo& info)
   
   nodei = new NodeInterface(&env, &emit);
 
-  onTagArrivedMutex = new Mutex();
   auto tagArrivedHandler = std::bind(&NodeInterface::handleOnTagArrived, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-  onTagArrivedEvent = new Event(emit, onTagArrivedMutex, &hasTag, tagArrivedHandler);
+  onTagArrivedEvent = new Event(emit, tagArrivedHandler);
   onTagArrivedEvent->Queue();
 
-  onTagWrittenMutex = new Mutex();
   auto tagWrittenHandler = std::bind(&NodeInterface::handleOnTagWritten, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-  onTagWrittenEvent = new Event(emit, onTagWrittenMutex, &hasWritten, tagWrittenHandler);
+  onTagWrittenEvent = new Event(emit, tagWrittenHandler);
   onTagWrittenEvent->Queue();
 
-  onTagDepartedMutex = new Mutex();
   auto tagDepartedHandler = std::bind(&NodeInterface::handleOnTagDeparted, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-  onTagDepartedEvent = new Event(emit, onTagDepartedMutex, &hasDeparted, tagDepartedHandler);
+  onTagDepartedEvent = new Event(emit, tagDepartedHandler);
   onTagDepartedEvent->Queue();
 
-  onErrorMutex = new Mutex();
   auto errorHandler = std::bind(&NodeInterface::handleOnError, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-  onErrorEvent = new Event(emit, onErrorMutex, &hasErrored, errorHandler);
+  onErrorEvent = new Event(emit, errorHandler);
   // onErrorEvent->Queue();
 
   // TagManager::getInstance().listen(nodei);
