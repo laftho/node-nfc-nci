@@ -85,7 +85,9 @@ public:
     Napi::Env env = Env();
     Napi::HandleScope scope(env);
 
-    handler(&env, &Callback(), NULL);
+    std::string error;
+
+    handler(&env, &Callback(), error);
 
     // Napi::HandleScope scope(Env());
 
