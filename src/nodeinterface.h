@@ -100,6 +100,7 @@ public:
     Napi::HandleScope scope(env);
 
     std::string error = perror;
+    trigger = false;
 
     handler(&env, &Callback(), error);
   }
@@ -108,6 +109,8 @@ public:
   {
     Napi::Env env = Env();
     Napi::HandleScope scope(env);
+
+    trigger = false;
 
     handler(&env, &Callback(), e.Message());
   }
