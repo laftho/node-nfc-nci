@@ -3,8 +3,17 @@
 #include "nodeinterface.h"
 
 NodeInterface* nodei;
-Mutex* mutex;
-Event* event;
+Mutex* onTagArrivedMutex;
+Event* onTagArrivedEvent;
+
+Mutex* onTagWrittenMutex;
+Event* onTagWrittenEvent;
+
+Mutex* onTagDepartedMutex;
+Event* onTagDepartedEvent;
+
+Mutex* onErrorMutex;
+Event* onErrorEvent;
 
 NodeInterface::NodeInterface(Napi::Env *env, Napi::Function *callback)
 {
@@ -19,17 +28,33 @@ NodeInterface::~NodeInterface()
 
 void NodeInterface::onError(std::string message)
 {
-  Napi::String mesg = Napi::String::New(*env, message);
-  
-  emit->Call({ Napi::String::New(*env, "error"), mesg });
+  onErrorMutex->Lock();
+
+  error = message;
+
+  onErrorMutex->Notify(false);
+
+  onErrorMutex->Unlock();
+}
+
+void NodeInterface::handleOnError(Napi::Env *env, Napi::FunctionReference *func)
+{
+  Napi::String mesg = Napi::String::New(*env, error);
+
+  func->Call({ Napi::String::New(*env, "error"), mesg });
 }
 
 void NodeInterface::onTagDeparted()
 {
-  emit->Call({ Napi::String::New(*env, "departed") });
+  onTagDepartedMutex->Notify(true);
 }
 
-Napi::Object NodeInterface::asNapiObjectTag(Tag::Tag tag)
+void NodeInterface::handleOnTagDeparted(Napi::Env *env, Napi::FunctionReference *func)
+{
+  func->Call({ Napi::String::New(*env, "departed") });
+}
+
+Napi::Object NodeInterface::asNapiObjectTag(Napi::Env* env, Tag::Tag tag)
 {
   Napi::Object tagInfo = Napi::Object::New(*env);
 
@@ -66,22 +91,40 @@ void NodeInterface::onTagArrived(Tag::Tag tag)
   
   //emit->Call({ Napi::String::New(*env, "arrived"), tagInfo });
 
+  onTagWrittenMutex->Lock();
+  onTagArrivedMutex->Lock();
+
   this->tag = &tag;
 
-  mutex->Notify(true);
+  onTagArrivedMutex->Notify(false);
+
+  onTagArrivedMutex->Unlock();
+  onTagWrittenMutex->Unlock();
 }
 
-void NodeInterface::pOnTagArrived() {
-  Napi::Object tagInfo = asNapiObjectTag(*tag);
+void NodeInterface::handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* func)
+{
+  Napi::Object tagInfo = asNapiObjectTag(env, *tag);
 
-  emit->Call({ Napi::String::New(*env, "arrived"), tagInfo });
+  func->Call({ Napi::String::New(*env, "arrived"), tagInfo });
 }
 
 void NodeInterface::onTagWritten(Tag::Tag tag)
 {
-  Napi::Object tagInfo = asNapiObjectTag(tag);
+  onTagArrivedMutex->Lock();
+  onTagWrittenMutex->Lock();
 
-  emit->Call({ Napi::String::New(*env, "written"), tagInfo });
+  this->tag = &tag;
+
+  onTagWrittenMutex->Notify(false);
+  onTagWrittenMutex->Unlock();
+  onTagArrivedMutex->Unlock();
+}
+
+void NodeInterface::handleOnTagWritten(Napi::Env *env, Napi::FunctionReference *func) {
+  Napi::Object tagInfo = asNapiObjectTag(env, *tag);
+
+  func->Call({ Napi::String::New(*env, "written"), tagInfo });
 }
 
 void NodeInterface::write(const Napi::CallbackInfo& info) {
@@ -103,9 +146,25 @@ Napi::Object listen(const Napi::CallbackInfo& info)
   
   nodei = new NodeInterface(&env, &emit);
 
-  mutex = new Mutex();
-  event = new Event(emit, mutex, nodei);
-  event->Queue();
+  onTagArrivedMutex = new Mutex();
+  auto tagArrivedHandler = std::bind(&NodeInterface::handleOnTagArrived, nodei, std::placeholders::_1, std::placeholders::_2);
+  onTagArrivedEvent = new Event(emit, onTagArrivedMutex, tagArrivedHandler);
+  onTagArrivedEvent->Queue();
+
+  onTagWrittenMutex = new Mutex();
+  auto tagWrittenHandler = std::bind(&NodeInterface::handleOnTagWritten, nodei, std::placeholders::_1, std::placeholders::_2);
+  onTagWrittenEvent = new Event(emit, onTagWrittenMutex, tagWrittenHandler);
+  onTagWrittenEvent->Queue();
+
+  onTagDepartedMutex = new Mutex();
+  auto tagDepartedHandler = std::bind(&NodeInterface::handleOnTagDeparted, nodei, std::placeholders::_1, std::placeholders::_2);
+  onTagDepartedEvent = new Event(emit, onTagDepartedMutex, tagDepartedHandler);
+  onTagDepartedEvent->Queue();
+
+  onErrorMutex = new Mutex();
+  auto errorHandler = std::bind(&NodeInterface::handleOnError, nodei, std::placeholders::_1, std::placeholders::_2);
+  onErrorEvent = new Event(emit, onErrorMutex, errorHandler);
+  // onErrorEvent->Queue();
 
   // TagManager::getInstance().listen(nodei);
 
