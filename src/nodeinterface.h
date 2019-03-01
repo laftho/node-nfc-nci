@@ -81,7 +81,7 @@ public:
     } while(!cont);
   }
 
-  void OnOk() {
+  void OnOK() {
     Napi::Env env = Env();
     Napi::HandleScope scope(env);
 
