@@ -71,8 +71,6 @@ void NodeInterface::handleOnError(Napi::Env *env, Napi::FunctionReference *func,
 
   func->Call({ Napi::String::New(*env, "error"), mesg });
 
-  auto errorHandler = std::bind(&NodeInterface::handleOnError, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-  onErrorEvent = new Event(*emit, errorHandler);
   onErrorEvent->Queue();
 }
 
@@ -93,8 +91,6 @@ void NodeInterface::handleOnTagDeparted(Napi::Env *env, Napi::FunctionReference 
 
   func->Call({ Napi::String::New(*env, "departed") });
 
-  auto tagDepartedHandler = std::bind(&NodeInterface::handleOnTagDeparted, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-  onTagDepartedEvent = new Event(*emit, tagDepartedHandler);
   onTagDepartedEvent->Queue();
 }
 
@@ -160,8 +156,6 @@ void NodeInterface::handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* 
 
   func->Call({ Napi::String::New(*env, "arrived"), tagInfo });
 
-  auto tagArrivedHandler = std::bind(&NodeInterface::handleOnTagArrived, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-  onTagArrivedEvent = new Event(*emit, tagArrivedHandler);
   onTagArrivedEvent->Queue();
 }
 
@@ -190,8 +184,6 @@ void NodeInterface::handleOnTagWritten(Napi::Env *env, Napi::FunctionReference *
 
   func->Call({ Napi::String::New(*env, "written"), tagInfo });
 
-  auto tagWrittenHandler = std::bind(&NodeInterface::handleOnTagWritten, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-  onTagWrittenEvent = new Event(*emit, tagWrittenHandler);
   onTagWrittenEvent->Queue();
 }
 
@@ -229,8 +221,6 @@ Napi::Object listen(const Napi::CallbackInfo& info)
   auto errorHandler = std::bind(&NodeInterface::handleOnError, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
   onErrorEvent = new Event(emit, errorHandler);
   // onErrorEvent->Queue();
-
-  // TagManager::getInstance().listen(nodei);
 
   Listener* listener = new Listener(finish, nodei);
 

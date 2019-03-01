@@ -20,8 +20,8 @@ public:
   void Execute() {
     try {
       TagManager::getInstance().listen(nodei);
-    } catch(std::exception* e) {
-      error = e->what();
+    } catch(std::exception& e) {
+      error = e.what();
     }
   }
 
