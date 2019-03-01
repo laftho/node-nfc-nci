@@ -73,9 +73,9 @@ public:
     do {
       mutex->Lock();
 
-      cont = *trigger;
-
       mutex->Wait(false);
+
+      cont = *trigger;
 
       mutex->Unlock();
     } while(!cont);
