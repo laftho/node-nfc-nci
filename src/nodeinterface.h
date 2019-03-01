@@ -36,8 +36,9 @@ class NodeInterface: public ITagManager
 private:
   Napi::Env* env;
   Napi::Function* emit;
-  Tag::Tag* tag;
 public:
+  Tag::Tag* tag;
+
   NodeInterface(Napi::Env* env, Napi::Function* callback);
   ~NodeInterface();
 
@@ -69,7 +70,11 @@ public:
   void OnOk() {
     Napi::HandleScope scope(Env());
     // Callback().Call({ Env().Null() });
-    nodei->pOnTagArrived();
+
+    Napi::Object tagInfo = nodei->asNapiObjectTag(*nodei->tag);
+
+    Callback().Call({ Napi::String::New(Env(), "arrived"), tagInfo });
+    // nodei->pOnTagArrived();
   }
 };
 
