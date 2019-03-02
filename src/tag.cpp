@@ -16,105 +16,105 @@ namespace Tag {
     writeable = false;
   }
 
-  Tag readTag(nfc_tag_info_t* tagInfo) {
-    Tag tag = Tag();
+  Tag* readTag(nfc_tag_info_t* tagInfo) {
+    Tag* tag = new Tag();
 
-    tag.technology = readTagTechnology(tagInfo);
-    tag.uid = readTagUid(tagInfo);
-    tag.ndef = readTagNDEF(tagInfo);
+    tag->technology = readTagTechnology(tagInfo);
+    tag->uid = readTagUid(tagInfo);
+    tag->ndef = readTagNDEF(tagInfo);
 
     return tag;
   }
 
-  TagTechnology readTagTechnology(nfc_tag_info_t* tagInfo)
+  TagTechnology* readTagTechnology(nfc_tag_info_t* tagInfo)
   {
-    TagTechnology technology = TagTechnology();
-    technology.code = tagInfo->technology;
+    TagTechnology* technology = new TagTechnology();
+    technology->code = tagInfo->technology;
 
-    switch(technology.code) {
+    switch(technology->code) {
       case TARGET_TYPE_ISO14443_3A:
       {
-        technology.name = "Type A";
-        technology.type = "ISO14443_3A";
+        technology->name = "Type A";
+        technology->type = "ISO14443_3A";
       } break;
       case TARGET_TYPE_ISO14443_3B:
       {
-        technology.name = "Type 4B";
-        technology.type = "ISO14443_3B";
+        technology->name = "Type 4B";
+        technology->type = "ISO14443_3B";
       } break;
       case TARGET_TYPE_ISO14443_4:
       {
-        technology.name = "Type 4A";
-        technology.type = "ISO14443_4";
+        technology->name = "Type 4A";
+        technology->type = "ISO14443_4";
       } break;
       case TARGET_TYPE_FELICA:
       {
-        technology.name = "Type F";
-        technology.type = "FELICA";
+        technology->name = "Type F";
+        technology->type = "FELICA";
       } break;
       case TARGET_TYPE_ISO15693:
       {
-        technology.name = "Type V";
-        technology.type = "ISO15693";
+        technology->name = "Type V";
+        technology->type = "ISO15693";
       } break;
       case TARGET_TYPE_NDEF:
       {
-        technology.name = "NDEF";
-        technology.type = "NDEF";
+        technology->name = "NDEF";
+        technology->type = "NDEF";
       } break;
       case TARGET_TYPE_NDEF_FORMATABLE:
       {
-        technology.name = "Formatable";
-        technology.type = "NDEF_FORMATABLE";
+        technology->name = "Formatable";
+        technology->type = "NDEF_FORMATABLE";
       } break;
       case TARGET_TYPE_MIFARE_CLASSIC:
       {
-        technology.name = "Type A - Mifare Classic";
-        technology.type = "MIFARE_CLASSIC";
+        technology->name = "Type A - Mifare Classic";
+        technology->type = "MIFARE_CLASSIC";
       } break;
       case TARGET_TYPE_MIFARE_UL:
       {
-        technology.name = "Type A - Mifare Ul";
-        technology.type = "MIFARE_UL";
+        technology->name = "Type A - Mifare Ul";
+        technology->type = "MIFARE_UL";
       } break;
       case TARGET_TYPE_KOVIO_BARCODE:
       {
-        technology.name = "Type A - Kovio Barcode";
-        technology.type = "KOVIO_BARCODE";
+        technology->name = "Type A - Kovio Barcode";
+        technology->type = "KOVIO_BARCODE";
       } break;
       case TARGET_TYPE_ISO14443_3A_3B:
       {
-        technology.name = "Type A/B";
-        technology.type = "ISO14443_3A_3B";
+        technology->name = "Type A/B";
+        technology->type = "ISO14443_3A_3B";
       } break;
       default:
       {
-        technology.name = "Unknown or not supported";
-        technology.type = "UNKNOWN";
+        technology->name = "Unknown or not supported";
+        technology->type = "UNKNOWN";
       } break;
     }
 
     return technology;
   }
 
-  TagUid readTagUid(nfc_tag_info_t* tagInfo) {
-    TagUid uid = TagUid();
+  TagUid* readTagUid(nfc_tag_info_t* tagInfo) {
+    TagUid* uid = new TagUid();
 
-    uid.length = tagInfo->uid_length;
+    uid->length = tagInfo->uid_length;
 
-    if (uid.length != 0x00 && uid.length <= 32)
+    if (uid->length != 0x00 && uid->length <= 32)
     {
-      switch(uid.length) {
+      switch(uid->length) {
         case 4:
         case 7:
         case 10:
-          uid.type = "NFCID1";
+          uid->type = "NFCID1";
           break;
         case 8:
-          uid.type = "NFCID2";
+          uid->type = "NFCID2";
           break;
         default:
-          uid.type = "UID";
+          uid->type = "UID";
           break;
       }
 
@@ -130,14 +130,14 @@ namespace Tag {
         }
       }
 
-      uid.id.assign(oss.str());
+      uid->id.assign(oss.str());
     }
 
     return uid;
   }
 
-  TagNDEF readTagNDEF(nfc_tag_info_t* tagInfo) {
-    TagNDEF ndef = TagNDEF();
+  TagNDEF* readTagNDEF(nfc_tag_info_t* tagInfo) {
+    TagNDEF* ndef = new TagNDEF();
 
     ndef_info_t ndefInfo;
 
@@ -147,9 +147,9 @@ namespace Tag {
 
     if (res == 0x01) {
       if (ndefInfo.is_ndef) {
-        ndef.size = ndefInfo.max_ndef_length;
-        ndef.length = ndefInfo.current_ndef_length;
-        ndef.writeable = (bool)ndefInfo.is_writable;
+        ndef->size = ndefInfo.max_ndef_length;
+        ndef->length = ndefInfo.current_ndef_length;
+        ndef->writeable = (bool)ndefInfo.is_writable;
 
         unsigned char* ndefContent = (unsigned char*)malloc(ndefInfo.current_ndef_length * sizeof(unsigned char));
 
@@ -159,7 +159,7 @@ namespace Tag {
 
         if (res != ndefInfo.current_ndef_length)
         {
-          ndef.error = "NDEF failed to read all data requested";
+          ndef->error = "NDEF failed to read all data requested";
         } else {
           switch(lNDEFType)
           {
@@ -170,13 +170,13 @@ namespace Tag {
               content = (char*)malloc(res * sizeof(char));
               res = ndef_readText(ndefContent, res, content, res);
 
-              ndef.read = res;
+              ndef->read = res;
               if (res >= 0x00)
               {
-                ndef.type = "Text";
-                ndef.content = ((std::string)content).substr(0, res);
+                ndef->type = "Text";
+                ndef->content = ((std::string)content).substr(0, res);
               } else {
-                ndef.error = "NDEF read text error";
+                ndef->error = "NDEF read text error";
               }
 
               if (content != NULL)
@@ -191,14 +191,14 @@ namespace Tag {
 
               content = (char*)malloc(res * sizeof(char));
               res = ndef_readUrl(ndefContent, res, content, res);
-              ndef.read = res;
+              ndef->read = res;
 
               if (res >= 0x00)
               {
-                ndef.type = "URI";
-                ndef.content = content;
+                ndef->type = "URI";
+                ndef->content = content;
               } else {
-                ndef.error = "NDEF read url error";
+                ndef->error = "NDEF read url error";
               }
 
               if (content != NULL)
@@ -209,23 +209,23 @@ namespace Tag {
             } break;
             case NDEF_FRIENDLY_TYPE_HR:
             {
-              ndef.type = "Handover Request";
-              ndef.read = 0;
+              ndef->type = "Handover Request";
+              ndef->read = 0;
             } break;
             case NDEF_FRIENDLY_TYPE_HS:
             {
-              ndef.type = "Handover Select";
-              ndef.read = 0;
+              ndef->type = "Handover Select";
+              ndef->read = 0;
             } break;
             case NDEF_FRIENDLY_TYPE_OTHER:
             {
-              ndef.type = "OTHER";
-              ndef.read = 0;
+              ndef->type = "OTHER";
+              ndef->read = 0;
             } break;
             default:
             {
-              ndef.type = "UNKNOWN";
-              ndef.read = 0;
+              ndef->type = "UNKNOWN";
+              ndef->read = 0;
             } break;
           }
         }
@@ -241,21 +241,21 @@ namespace Tag {
     return ndef;
   }
 
-  TagNDEF writeTagNDEF(nfc_tag_info_t* tagInfo, TagNDEF ndef) {
-    TagNDEF wndef;
+  TagNDEF* writeTagNDEF(nfc_tag_info_t* tagInfo, TagNDEF* ndef) {
+    TagNDEF* wndef = new TagNDEF();
 
-    int res = nfcTag_writeNdef(tagInfo->handle, (unsigned char*)ndef.content.c_str(), (unsigned int)ndef.content.length());
+    int res = nfcTag_writeNdef(tagInfo->handle, (unsigned char*)ndef->content.c_str(), (unsigned int)ndef->content.length());
 
-    wndef.length = (unsigned int)res;
-    wndef.size = (unsigned int)res;
-    wndef.read = 0;
+    wndef->length = (unsigned int)res;
+    wndef->size = (unsigned int)res;
+    wndef->read = 0;
 
     if (res > 0x00) {
-      wndef.content = ndef.content;
-      wndef.type = ndef.type;
-      wndef.writeable = true;
+      wndef->content = ndef->content;
+      wndef->type = ndef->type;
+      wndef->writeable = true;
     } else {
-      wndef.writeable = false;
+      wndef->writeable = false;
     }
 
     return wndef;

@@ -8,10 +8,10 @@
 
 class ITagManager {
 public:
-  virtual void onTagArrived(Tag::Tag tag) = 0;
+  virtual void onTagArrived(Tag::Tag* tag) = 0;
   virtual void onTagDeparted() = 0;
   virtual void onError(std::string message) = 0;
-  virtual void onTagWritten(Tag::Tag tag) = 0;
+  virtual void onTagWritten(Tag::Tag* tag) = 0;
 };
 
 class TagManager
@@ -20,7 +20,7 @@ private:
   ITagManager* tagInterface;
 
   bool hasNextWriteNDEF = false;
-  Tag::TagNDEF nextWriteNDEF;
+  Tag::TagNDEF* nextWriteNDEF;
 
   TagManager();
   
@@ -34,7 +34,7 @@ public:
   void onTagArrival(nfc_tag_info_t *pTagInfo);
   void onTagDeparture(void);
 
-  void setWrite(Tag::TagNDEF ndef);
+  void setWrite(Tag::TagNDEF* ndef);
 
   void onDeviceArrival(void);
   void onDeviceDeparture(void);

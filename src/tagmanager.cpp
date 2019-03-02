@@ -50,7 +50,7 @@ void TagManager::listen(ITagManager* tagInterface)
   };
 }
 
-void TagManager::setWrite(Tag::TagNDEF ndef) {
+void TagManager::setWrite(Tag::TagNDEF* ndef) {
 
   Device::mutex.Lock();
 
@@ -58,13 +58,13 @@ void TagManager::setWrite(Tag::TagNDEF ndef) {
     nfc_tag_info_t tagInfo;
 
     memcpy(&tagInfo, &Device::tagInfo, sizeof(nfc_tag_info_t));
-    Tag::Tag tag = Tag::readTag(&tagInfo);
+    Tag::Tag* tag = Tag::readTag(&tagInfo);
 
-    tag.ndefWritten = Tag::TagNDEFWritten();
+    tag->ndefWritten = new Tag::TagNDEFWritten();
 
-    tag.ndefWritten.written = Tag::writeTagNdef(&tagInfo, nextWriteNDEF);
-    tag.ndefWritten.previous = tag.ndef;
-    tag.ndefWritten.updated = Tag::readTagNDEF(&tagInfo);
+    tag->ndefWritten->written = Tag::writeTagNdef(&tagInfo, nextWriteNDEF);
+    tag->ndefWritten->previous = tag->ndef;
+    tag->ndefWritten->updated = Tag::readTagNDEF(&tagInfo);
 
     tagInterface->onTagWritten(tag);
   } else {
@@ -80,16 +80,16 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
   nfc_tag_info_t tagInfo;
   
   memcpy(&tagInfo, pTagInfo, sizeof(nfc_tag_info_t));
-  Tag::Tag tag = Tag::readTag(&tagInfo);
+  Tag::Tag* tag = Tag::readTag(&tagInfo);
 
   tagInterface->onTagArrived(tag);
 
   if (hasNextWriteNDEF) {
-    tag.ndefWritten = Tag::TagNDEFWritten();
+    tag->ndefWritten = new Tag::TagNDEFWritten();
 
-    tag.ndefWritten.written = Tag::writeTagNdef(&tagInfo, nextWriteNDEF);
-    tag.ndefWritten.previous = tag.ndef;
-    tag.ndefWritten.updated = Tag::readTagNDEF(&tagInfo);
+    tag->ndefWritten->written = Tag::writeTagNdef(&tagInfo, nextWriteNDEF);
+    tag->ndefWritten->previous = tag->ndef;
+    tag->ndefWritten->updated = Tag::readTagNDEF(&tagInfo);
 
     hasNextWriteNDEF = false;
 

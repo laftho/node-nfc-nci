@@ -73,31 +73,31 @@ Napi::Object asNapiObjectTag(Napi::Env* env, Tag::Tag* tag)
 
   // Napi::Object ndefWritten = Napi::Object::New(*env);
 
-  technology.Set("code", tag->technology.code);
-  technology.Set("name", tag->technology.name);
-  technology.Set("type", tag->technology.type);
+  technology.Set("code", tag->technology->code);
+  technology.Set("name", tag->technology->name);
+  technology.Set("type", tag->technology->type);
   tagInfo.Set("technology", technology);
 
-  uid.Set("id", tag->uid.id);
-  uid.Set("type", tag->uid.type);
-  uid.Set("length", tag->uid.length);
+  uid.Set("id", tag->uid->id);
+  uid.Set("type", tag->uid->type);
+  uid.Set("length", tag->uid->length);
   tagInfo.Set("uid", uid);
 
-  ndef.Set("size", tag->ndef.size);
-  ndef.Set("length", tag->ndef.length);
-  ndef.Set("read", tag->ndef.read);
-  ndef.Set("writeable", tag->ndef.writeable);
-  ndef.Set("type", tag->ndef.type);
-  ndef.Set("content", tag->ndef.content);
+  ndef.Set("size", tag->ndef->size);
+  ndef.Set("length", tag->ndef->length);
+  ndef.Set("read", tag->ndef->read);
+  ndef.Set("writeable", tag->ndef->writeable);
+  ndef.Set("type", tag->ndef->type);
+  ndef.Set("content", tag->ndef->content);
   tagInfo.Set("ndef", ndef);
 
   return tagInfo;
 }
 
-void NodeInterface::onTagArrived(Tag::Tag tag)
+void NodeInterface::onTagArrived(Tag::Tag* tag)
 {
-  this->tag = &tag;
-  arrivedTag = &tag;
+  this->tag = tag;
+  arrivedTag = tag;
 
   napi_call_threadsafe_function(handleOnTagArrivedTSF, &arrivedTag, napi_tsfn_nonblocking);
 }
@@ -113,10 +113,10 @@ static void handleOnTagArrived(Napi::Env env, napi_value func, void* context, vo
   napi_call_function(env, undefined, func, 2, argv, NULL);
 }
 
-void NodeInterface::onTagWritten(Tag::Tag tag)
+void NodeInterface::onTagWritten(Tag::Tag* tag)
 {
-  this->tag = &tag;
-  writtenTag = &tag;
+  this->tag = tag;
+  writtenTag = tag;
 
   napi_call_threadsafe_function(handleOnTagWrittenTSF, &writtenTag, napi_tsfn_nonblocking);
 }
@@ -135,10 +135,10 @@ static void handleOnTagWritten(Napi::Env env, napi_value func, void* context, vo
 void NodeInterface::write(const Napi::CallbackInfo& info) {
   Napi::Object arg = info[0].As<Napi::Object>();
 
-  Tag::TagNDEF ndef;
+  Tag::TagNDEF* ndef = new Tag::TagNDEF();
 
-  ndef.type = (std::string)arg.Get("type").As<Napi::String>();
-  ndef.content = (std::string)arg.Get("content").As<Napi::String>();
+  ndef->type = (std::string)arg.Get("type").As<Napi::String>();
+  ndef->content = (std::string)arg.Get("content").As<Napi::String>();
 
   TagManager::getInstance().setWrite(ndef);
 }

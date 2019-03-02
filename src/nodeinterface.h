@@ -50,9 +50,9 @@ public:
   // void handleOnTagWritten(Napi::Env* env, Napi::FunctionReference* func, std::string error);
   // void handleOnError(Napi::Env* env, Napi::FunctionReference* func, std::string error);
   // void handleOnError(Napi::Env env, Napi::Function func, void* context, void* data);
-  void onTagArrived(Tag::Tag tag);
+  void onTagArrived(Tag::Tag* tag);
   void onTagDeparted();
-  void onTagWritten(Tag::Tag tag);
+  void onTagWritten(Tag::Tag* tag);
   void onError(std::string message);
 };
 
