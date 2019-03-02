@@ -29,6 +29,8 @@ public:
   void OnError();
 };
 
+Napi::Object asNapiObjectTag(Napi::Env* env, Tag::Tag* tag);
+
 class NodeInterface: public ITagManager
 {
 private:
@@ -42,12 +44,12 @@ public:
   ~NodeInterface();
 
   void write(const Napi::CallbackInfo& info);
-  Napi::Object asNapiObjectTag(Napi::Env* env, Tag::Tag tag);
 
-  void handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* func, std::string error);
-  void handleOnTagDeparted(Napi::Env* env, Napi::FunctionReference* func, std::string error);
-  void handleOnTagWritten(Napi::Env* env, Napi::FunctionReference* func, std::string error);
-  void handleOnError(Napi::Env* env, Napi::FunctionReference* func, std::string error);
+  // void handleOnTagArrived(Napi::Env* env, Napi::FunctionReference* func, std::string error);
+  // void handleOnTagDeparted(Napi::Env* env, Napi::FunctionReference* func, std::string error);
+  // void handleOnTagWritten(Napi::Env* env, Napi::FunctionReference* func, std::string error);
+  // void handleOnError(Napi::Env* env, Napi::FunctionReference* func, std::string error);
+  // void handleOnError(Napi::Env env, Napi::Function func, void* context, void* data);
   void onTagArrived(Tag::Tag tag);
   void onTagDeparted();
   void onTagWritten(Tag::Tag tag);

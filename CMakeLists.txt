@@ -10,13 +10,15 @@ add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 # Gives our library file a .node extension without any "lib" prefix
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 
+target_include_directories(${PROJECT_NAME} PRIVATE "/usr/include/node")
+
 # Include N-API wrappers
 if (EXISTS "${CMAKE_SOURCE_DIR}/node_modules/")
   target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/node_modules/node-addon-api")
-  target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/node_modules/node-addon-api/src")
+  #target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/node_modules/node-addon-api/src")
 else()
   target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/../node-addon-api")
-  target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/../node-addon-api/src")
+  #target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/../node-addon-api/src")
 endif()
 
 # Essential include files to build a node addon,
