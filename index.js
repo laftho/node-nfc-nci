@@ -8,7 +8,7 @@ emitter.on("arrived", tag => console.log(JSON.stringify(tag)));
 emitter.on("departed", () => console.log("departed"));
 
 
-const context = addon.listen(emitter.emit.bind(emitter), (error) => console.log(error));
+const context = addon.listen(emitter.emit.bind(emitter));
 console.log(JSON.stringify(context));
 
 module.exports = addon;

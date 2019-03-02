@@ -1,8 +1,12 @@
 #include <functional>
 #include <exception>
 #include "nodeinterface.h"
+#include <node_api.h>
 
 NodeInterface* nodei;
+
+pthread_t listenThread;
+napi_threadsafe_function emitTSF;
 
 Event* onTagArrivedEvent;
 Event* onTagWrittenEvent;
@@ -48,6 +52,7 @@ NodeInterface::~NodeInterface()
 
 void NodeInterface::onError(std::string message)
 {
+  /*
   onErrorEvent->Lock();
 
   error = message;
@@ -55,6 +60,9 @@ void NodeInterface::onError(std::string message)
   onErrorEvent->Notify(false);
 
   onErrorEvent->Unlock();
+  */
+  
+  napi_call_threadsafe_function(emitTSF, message, napi_tsfn_blocking);
 }
 
 void NodeInterface::handleOnError(Napi::Env *env, Napi::FunctionReference *func, std::string error)
@@ -198,14 +206,33 @@ void NodeInterface::write(const Napi::CallbackInfo& info) {
   TagManager::getInstance().setWrite(ndef);
 }
 
+void *runListenThread(void *arg) {
+  (void) arg;
+  
+  napi_acquire_threadsafe_function(emitTSF);
+  
+  try {
+    TagManager::getInstance().listen(nodei);
+  } catch(std::exception& e) {
+    nodei->onError(e.what());
+  }
+
+  
+  napi_release_threadsafe_function(emitTSF, napi_tsfn_release);
+  
+  pthread_exit(NULL);
+};
+
 Napi::Object listen(const Napi::CallbackInfo& info)
 {
   Napi::Env env = info.Env();
   Napi::Function emit = info[0].As<Napi::Function>();
-  Napi::Function finish = info[1].As<Napi::Function>();
   
   nodei = new NodeInterface(&env, &emit);
-
+  
+  pthread_create(&listenThread, NULL, runListenThread, NULL);
+  
+  /*
   auto tagArrivedHandler = std::bind(&NodeInterface::handleOnTagArrived, nodei, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
   onTagArrivedEvent = new Event(emit, tagArrivedHandler);
   onTagArrivedEvent->Queue();
@@ -225,7 +252,10 @@ Napi::Object listen(const Napi::CallbackInfo& info)
   Listener* listener = new Listener(finish, nodei);
 
   listener->Queue();
-
+*/
+  
+  
+  
   Napi::Object context = Napi::Object::New(env);
 
   auto write = std::bind(&NodeInterface::write, nodei, std::placeholders::_1);
