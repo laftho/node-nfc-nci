@@ -53,7 +53,7 @@ namespace Tag {
   TagTechnology* readTagTechnology(nfc_tag_info_t* tagInfo);
   TagUid* readTagUid(nfc_tag_info_t* tagInfo);
   TagNDEF* readTagNDEF(nfc_tag_info_t* tagInfo);
-  TagNDEF* writeTagNDef(nfc_tag_info_t* tagInfo, TagNDEF* ndef);
+  TagNDEF* writeTagNDEF(nfc_tag_info_t* tagInfo, TagNDEF* ndef);
 };
 
 #endif //NODE_NFC_NCI_TAG_H
