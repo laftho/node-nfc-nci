@@ -87,7 +87,7 @@ void TagManager::onTagArrival(nfc_tag_info_t* pTagInfo)
   if (hasNextWriteNDEF) {
     tag->ndefWritten = new Tag::TagNDEFWritten();
 
-    tag->ndefWritten->written = Tag::writeTagNdef(&tagInfo, nextWriteNDEF);
+    tag->ndefWritten->written = Tag::writeTagNDef(&tagInfo, nextWriteNDEF);
     tag->ndefWritten->previous = tag->ndef;
     tag->ndefWritten->updated = Tag::readTagNDEF(&tagInfo);
 
