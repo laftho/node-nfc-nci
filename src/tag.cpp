@@ -245,7 +245,7 @@ namespace Tag {
     TagNDEF* wndef = new TagNDEF();
 
     unsigned char* value = (unsigned char*)ndef->content.c_str();
-    unsigned int len = sizeof(value);
+    unsigned int len = (unsigned int)strlen((char*)value);
 
     int res = nfcTag_writeNdef(tagInfo->handle, value, len);
 
