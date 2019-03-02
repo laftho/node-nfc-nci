@@ -1,14 +1,30 @@
 const EventEmitter = require('events').EventEmitter;
-const addon = require('./build/Debug/node_nfc_nci');
 
-const emitter = new EventEmitter();
+const debug = process.env.NODE_DEBUG && process.env.NODE_DEBUG.includes('node_nfc_nci');
 
-emitter.on("error", message => console.log(message));
-emitter.on("arrived", tag => console.log(JSON.stringify(tag)));
-emitter.on("departed", () => console.log("departed"));
+const native_nci = require(`./build/${debug ? 'Debug' : 'Release'}/node_nfc_nci`);
 
+class NCIListener {
+    constructor() {
+        this.emitter = new EventEmitter();
+        this.context = null;
+    }
 
-const context = addon.listen(emitter.emit.bind(emitter));
-console.log(JSON.stringify(context));
+    on(event, handler) {
+        this.emitter.on(event, handler);
+    }
 
-module.exports = addon;
+    write(type, content) {
+        this.context.write({ type, content });
+    }
+
+    listen(cb) {
+        this.context = native_nci.listen(this.emitter.emit.bind(this.emitter));
+
+        if (cb) {
+            cb(this);
+        }
+    }
+}
+
+module.exports = new NCIListener();
