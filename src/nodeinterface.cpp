@@ -56,11 +56,11 @@ void NodeInterface::onTagDeparted()
 
 static void handleOnTagDeparted(Napi::Env env, napi_value func, void* context, void* data)
 {
-  napi_value argv[2] = { Napi::String::New(env, "departed") };
+  napi_value argv[1] = { Napi::String::New(env, "departed") };
 
   napi_value undefined;
   napi_get_undefined(env, &undefined);
-  napi_call_function(env, undefined, func, 2, argv, NULL);
+  napi_call_function(env, undefined, func, 1, argv, NULL);
 }
 
 Napi::Object asNapiObjectTag(Napi::Env* env, Tag::Tag* tag)
@@ -99,7 +99,7 @@ void NodeInterface::onTagArrived(Tag::Tag tag)
   this->tag = &tag;
   arrivedTag = &tag;
 
-  napi_call_threadsafe_function(handleOnErrorTSF, &arrivedTag, napi_tsfn_nonblocking);
+  napi_call_threadsafe_function(handleOnTagArrivedTSF, &arrivedTag, napi_tsfn_nonblocking);
 }
 
 static void handleOnTagArrived(Napi::Env env, napi_value func, void* context, void* data)
@@ -118,7 +118,7 @@ void NodeInterface::onTagWritten(Tag::Tag tag)
   this->tag = &tag;
   writtenTag = &tag;
 
-  napi_call_threadsafe_function(handleOnErrorTSF, &writtenTag, napi_tsfn_nonblocking);
+  napi_call_threadsafe_function(handleOnTagWrittenTSF, &writtenTag, napi_tsfn_nonblocking);
 }
 
 static void handleOnTagWritten(Napi::Env env, napi_value func, void* context, void* data)
