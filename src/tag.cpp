@@ -244,13 +244,16 @@ namespace Tag {
   TagNDEF* writeTagNDEF(nfc_tag_info_t* tagInfo, TagNDEF* ndef) {
     TagNDEF* wndef = new TagNDEF();
 
-    int res = nfcTag_writeNdef(tagInfo->handle, (unsigned char*)ndef->content.c_str(), (unsigned int)ndef->content.length());
+    unsigned char* value = (unsigned char*)ndef->content.c_str();
+    unsigned int len = sizeof(value);
 
-    wndef->length = (unsigned int)res;
-    wndef->size = (unsigned int)res;
+    int res = nfcTag_writeNdef(tagInfo->handle, value, len);
+
+    wndef->length = len;
+    wndef->size = len;
     wndef->read = 0;
 
-    if (res > 0x00) {
+    if (res == 0x00) {
       wndef->content = ndef->content;
       wndef->type = ndef->type;
       wndef->writeable = true;
