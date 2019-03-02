@@ -62,7 +62,7 @@ void TagManager::setWrite(Tag::TagNDEF* ndef) {
 
     tag->ndefWritten = new Tag::TagNDEFWritten();
 
-    tag->ndefWritten->written = Tag::writeTagNDEF(&tagInfo, nextWriteNDEF);
+    tag->ndefWritten->written = Tag::writeTagNDEF(&tagInfo, ndef);
     tag->ndefWritten->previous = tag->ndef;
     tag->ndefWritten->updated = Tag::readTagNDEF(&tagInfo);
 
