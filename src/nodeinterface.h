@@ -16,7 +16,7 @@ public:
 
   void setWrite(const Napi::CallbackInfo& info);
   void clearWrite(const Napi::CallbackInfo& info);
-  Napi::Object getWrite(const Napi::CallbackInfo& info);
+  Napi::Boolean hasWrite(const Napi::CallbackInfo& info);
   void immediateWrite(const Napi::CallbackInfo& info);
 
   void onTagArrived(Tag::Tag* tag);

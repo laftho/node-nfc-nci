@@ -104,12 +104,12 @@ void NodeInterface::clearWrite(const Napi::CallbackInfo &info) {
   TagManager::getInstance().clearWrite();
 }
 
-Napi::Object NodeInterface::getWrite(const Napi::CallbackInfo &info) {
-  auto ndef = TagManager::getInstance().getWrite();
+Napi::Boolean NodeInterface::hasWrite(const Napi::CallbackInfo &info) {
+  auto has = TagManager::getInstance().hasWrite();
 
   Napi::Env env = info.Env();
 
-  return TagSerialize::NDEF(&env, ndef);
+  return Napi::Boolean::New(env, has);
 }
 
 void NodeInterface::onTagDeparted() {
@@ -185,8 +185,8 @@ Napi::Object listen(const Napi::CallbackInfo& info) {
   auto clearWrite = std::bind(&NodeInterface::clearWrite, nodei, std::placeholders::_1);
   context.Set("clearWrite", Napi::Function::New(env, clearWrite));
 
-  auto getWrite = std::bind(&NodeInterface::getWrite, nodei, std::placeholders::_1);
-  context.Set("getWrite", Napi::Function::New(env, getWrite));
+  auto hasWrite = std::bind(&NodeInterface::hasWrite, nodei, std::placeholders::_1);
+  context.Set("hasWrite", Napi::Function::New(env, hasWrite));
 
   auto immediateWrite = std::bind(&NodeInterface::immediateWrite, nodei, std::placeholders::_1);
   context.Set("immediateWrite", Napi::Function::New(env, immediateWrite));

@@ -88,8 +88,8 @@ void TagManager::setWrite(Tag::TagNDEF* ndef) {
   Device::mutex.Unlock();
 }
 
-Tag::TagNDEF* TagManager::getWrite() {
-  return nextWriteNDEF;
+bool TagManager::hasWrite() {
+  return hasNextWriteNDEF;
 }
 
 void TagManager::clearWrite() {

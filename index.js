@@ -39,17 +39,7 @@ class NCIListener extends EventEmitter {
     }
 
     hasWrite() {
-        const ndef = this.context.getWrite();
-
-        if (ndef) {
-            return true;
-        }
-
-        return false;
-    }
-
-    getWrite() {
-        return this.context.getWrite();
+        return this.context.hasWrite();
     }
 
     listen(cb) {
