@@ -29,7 +29,7 @@ void TagManager::listen(ITagManager* tagInterface)
   while(running) {
     Device::mutex.Lock();
 
-    if (Device::state != Device::State::WAITING) {
+    if (Device::state == Device::State::TAG_DEPARTED) {
       Device::state = Device::State::WAITING;
       Device::mutex.Wait(false);
     }
