@@ -73,7 +73,7 @@ namespace Device {
   void onTagDeparture(void) {
     mutex.Lock();
 
-    if (state == State::TAG_ARRIVED) {
+    if (state == State::WAITING) {
       state = State::TAG_DEPARTED;
       mutex.Notify(false);
     }

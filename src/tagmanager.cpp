@@ -29,7 +29,7 @@ void TagManager::listen(ITagManager* tagInterface)
   while(running) {
     Device::mutex.Lock();
 
-    if (Device::state == Device::State::TAG_DEPARTED) {
+    if (Device::state != Device::State::WAITING) {
       Device::state = Device::State::WAITING;
       Device::mutex.Wait(false);
     }
@@ -55,20 +55,18 @@ void TagManager::immediateWrite(Tag::TagNDEF* ndef, bool needsLock) {
     Device::mutex.Lock();
   }
 
-  if (Device::state == Device::State::TAG_ARRIVED) {
-    nfc_tag_info_t tagInfo;
+  nfc_tag_info_t tagInfo;
 
-    memcpy(&tagInfo, &Device::tagInfo, sizeof(nfc_tag_info_t));
-    Tag::Tag* tag = Tag::readTag(&tagInfo);
+  memcpy(&tagInfo, &Device::tagInfo, sizeof(nfc_tag_info_t));
+  Tag::Tag* tag = Tag::readTag(&tagInfo);
 
-    tag->ndefWritten = new Tag::TagNDEFWritten();
+  tag->ndefWritten = new Tag::TagNDEFWritten();
 
-    tag->ndefWritten->written = Tag::writeTagNDEF(&tagInfo, ndef);
-    tag->ndefWritten->previous = tag->ndef;
-    tag->ndefWritten->updated = Tag::readTagNDEF(&tagInfo);
+  tag->ndefWritten->written = Tag::writeTagNDEF(&tagInfo, ndef);
+  tag->ndefWritten->previous = tag->ndef;
+  tag->ndefWritten->updated = Tag::readTagNDEF(&tagInfo);
 
-    tagInterface->onTagWritten(tag);
-  }
+  tagInterface->onTagWritten(tag);
 
   if (needsLock) {
     Device::mutex.Unlock();
