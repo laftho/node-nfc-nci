@@ -54,7 +54,7 @@ void TagManager::setWrite(Tag::TagNDEF* ndef) {
 
   Device::mutex.Lock();
 
-  if (Device::State::TAG_ARRIVED && hasNextWriteNDEF != true) {
+  if (Device::state == Device::State::TAG_ARRIVED && hasNextWriteNDEF != true) {
     nfc_tag_info_t tagInfo;
 
     memcpy(&tagInfo, &Device::tagInfo, sizeof(nfc_tag_info_t));
