@@ -12,7 +12,7 @@ class NCIListener extends EventEmitter {
         this.context = null;
 
         this.emitter.on("arrived", tag => {
-           tag.write = this.context.immediateWrite;
+           tag.write = (type, content) => this.context.immediateWrite({ type, content });
 
            this.emit("arrived", tag);
         });
