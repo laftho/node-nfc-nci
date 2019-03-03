@@ -74,7 +74,7 @@ static void handleOnTagWritten(Napi::Env env, napi_value func, void* context, vo
   tagInfo.Set("ndef", TagSerialize::NDEF(&env, writtenTag->ndefWritten->updated));
 
   Napi::Object previous = TagSerialize::Tag(&env, writtenTag);
-  tagInfo.Set("ndef", TagSerialize::NDEF(&env, writtenTag->ndefWritten->previous));
+  previous.Set("ndef", TagSerialize::NDEF(&env, writtenTag->ndefWritten->previous));
 
   napi_value argv[3] = { Napi::String::New(env, "written"), tagInfo, previous };
 
