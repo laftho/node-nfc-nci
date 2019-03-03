@@ -244,21 +244,34 @@ namespace Tag {
   TagNDEF* writeTagNDEF(nfc_tag_info_t* tagInfo, TagNDEF* ndef) {
     TagNDEF* wndef = new TagNDEF();
 
-    unsigned char* value = (unsigned char*)ndef->content.c_str();
-    unsigned int len = (unsigned int)strlen((char*)value);
+    char* text = (char*)ndef->content.c_str();
+    char* lang = (char*)"en";
+    unsigned int* len;
+    unsigned char** buffer;
 
-    int res = nfcTag_writeNdef(tagInfo->handle, value, len);
+    *len = (unsigned int)(strlen(text) + strlen(lang) + 30); /*TODO : replace 30 by TEXT NDEF message header*/;
+    *buffer = (unsigned char*) malloc(*len * sizeof(unsigned char));
 
-    wndef->length = len;
-    wndef->size = len;
+    wndef->length = *len;
+    wndef->size = *len;
     wndef->read = 0;
+    wndef->writeable = false;
+
+    int res = ndef_createText(lang, text, *buffer, *len);
+
+    if (res <= 0x00) { // failed
+      return wndef;
+    }
+
+    wndef->length = (unsigned int)res;
+    wndef->size = (unsigned int)res;
+
+    res = nfcTag_writeNdef(tagInfo->handle, *buffer, *len);
 
     if (res == 0x00) {
       wndef->content = ndef->content;
       wndef->type = ndef->type;
       wndef->writeable = true;
-    } else {
-      wndef->writeable = false;
     }
 
     return wndef;
