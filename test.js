@@ -21,6 +21,8 @@ nci.listen(context => {
     context.on("departed", tag => {
         console.log(`DEPARTED: ${JSON.stringify(tag)}`);
 
-        context.setNextWrite("Text", "blarg");
+        if (tag.ndef.content !== "blarg") {
+            context.setNextWrite("Text", "blarg");
+        }
     });
 });
