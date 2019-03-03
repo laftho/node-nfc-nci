@@ -34,7 +34,10 @@ public:
   void onTagArrival(nfc_tag_info_t *pTagInfo);
   void onTagDeparture(void);
 
+  void immediateWrite(Tag::TagNDEF* ndef, bool needsLock);
   void setWrite(Tag::TagNDEF* ndef);
+  Tag::TagNDEF* getWrite();
+  void clearWrite();
 
   void onDeviceArrival(void);
   void onDeviceDeparture(void);

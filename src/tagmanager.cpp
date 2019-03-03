@@ -12,7 +12,7 @@ TagManager& TagManager::getInstance()
   return instance;
 }
 
-TagManager::TagManager() { }
+TagManager::TagManager() = default;
 
 TagManager::~TagManager() {
   Device::deinitialize();
@@ -50,11 +50,12 @@ void TagManager::listen(ITagManager* tagInterface)
   };
 }
 
-void TagManager::setWrite(Tag::TagNDEF* ndef) {
+void TagManager::immediateWrite(Tag::TagNDEF* ndef, bool needsLock) {
+  if (needsLock) {
+    Device::mutex.Lock();
+  }
 
-  Device::mutex.Lock();
-
-  if (Device::state == Device::State::TAG_ARRIVED && hasNextWriteNDEF != true) {
+  if (Device::state == Device::State::TAG_ARRIVED) {
     nfc_tag_info_t tagInfo;
 
     memcpy(&tagInfo, &Device::tagInfo, sizeof(nfc_tag_info_t));
@@ -67,10 +68,35 @@ void TagManager::setWrite(Tag::TagNDEF* ndef) {
     tag->ndefWritten->updated = Tag::readTagNDEF(&tagInfo);
 
     tagInterface->onTagWritten(tag);
+  }
+
+  if (needsLock) {
+    Device::mutex.Unlock();
+  }
+}
+
+void TagManager::setWrite(Tag::TagNDEF* ndef) {
+  Device::mutex.Lock();
+
+  if (!hasNextWriteNDEF) {
+    immediateWrite(ndef, false);
   } else {
     nextWriteNDEF = ndef;
     hasNextWriteNDEF = true;
   }
+
+  Device::mutex.Unlock();
+}
+
+Tag::TagNDEF* TagManager::getWrite() {
+  return nextWriteNDEF;
+}
+
+void TagManager::clearWrite() {
+  Device::mutex.Lock();
+
+  nextWriteNDEF = nullptr;
+  hasNextWriteNDEF = false;
 
   Device::mutex.Unlock();
 }

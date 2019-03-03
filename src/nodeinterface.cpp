@@ -17,10 +17,7 @@ std::string errorMessage;
 Tag::Tag* arrivedTag;
 Tag::Tag* writtenTag;
 
-NodeInterface::NodeInterface(Napi::Env *env, Napi::Function *callback) {
-  this->env = env;
-  this->emit = callback;
-}
+NodeInterface::NodeInterface() { }
 
 NodeInterface::~NodeInterface() { }
 
@@ -45,7 +42,6 @@ static void handleOnError(Napi::Env env, napi_value func, void* context, void* d
 }
 
 void NodeInterface::onTagArrived(Tag::Tag* tag) {
-  this->tag = tag;
   arrivedTag = tag;
 
   napi_call_threadsafe_function(handleOnTagArrivedTSF, &arrivedTag, napi_tsfn_nonblocking);
@@ -63,7 +59,6 @@ static void handleOnTagArrived(Napi::Env env, napi_value func, void* context, vo
 }
 
 void NodeInterface::onTagWritten(Tag::Tag* tag) {
-  this->tag = tag;
   writtenTag = tag;
 
   napi_call_threadsafe_function(handleOnTagWrittenTSF, &writtenTag, napi_tsfn_nonblocking);
@@ -83,7 +78,7 @@ static void handleOnTagWritten(Napi::Env env, napi_value func, void* context, vo
   napi_call_function(env, undefined, func, 3, argv, NULL);
 }
 
-void NodeInterface::write(const Napi::CallbackInfo& info) {
+void NodeInterface::setWrite(const Napi::CallbackInfo& info) {
   Napi::Object arg = info[0].As<Napi::Object>();
 
   Tag::TagNDEF* ndef = new Tag::TagNDEF();
@@ -92,6 +87,29 @@ void NodeInterface::write(const Napi::CallbackInfo& info) {
   ndef->content = (std::string)arg.Get("content").As<Napi::String>();
 
   TagManager::getInstance().setWrite(ndef);
+}
+
+void NodeInterface::immediateWrite(const Napi::CallbackInfo &info) {
+  Napi::Object arg = info[0].As<Napi::Object>();
+
+  Tag::TagNDEF* ndef = new Tag::TagNDEF();
+
+  ndef->type = (std::string)arg.Get("type").As<Napi::String>();
+  ndef->content = (std::string)arg.Get("content").As<Napi::String>();
+
+  TagManager::getInstance().immediateWrite(ndef, true);
+}
+
+void NodeInterface::clearWrite(const Napi::CallbackInfo &info) {
+  TagManager::getInstance().clearWrite();
+}
+
+Napi::Object NodeInterface::getWrite(const Napi::CallbackInfo &info) {
+  auto ndef = TagManager::getInstance().getWrite();
+
+  Napi::Env env = info.Env();
+
+  return TagSerialize::NDEF(&env, ndef);
 }
 
 void NodeInterface::onTagDeparted() {
@@ -135,32 +153,43 @@ Napi::Object listen(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   Napi::Function emit = info[0].As<Napi::Function>();
   
-  nodei = new NodeInterface(&env, &emit);
-
-  napi_create_threadsafe_function(env, emit, NULL, Napi::String::New(env, "onTagArrived"), 0, 1, NULL, NULL, NULL, (napi_threadsafe_function_call_js)handleOnTagArrived, &handleOnTagArrivedTSF);
-  napi_create_threadsafe_function(env, emit, NULL, Napi::String::New(env, "onTagDeparted"), 0, 1, NULL, NULL, NULL, (napi_threadsafe_function_call_js)handleOnTagDeparted, &handleOnTagDepartedTSF);
-  napi_create_threadsafe_function(env, emit, NULL, Napi::String::New(env, "onTagWritten"), 0, 1, NULL, NULL, NULL, (napi_threadsafe_function_call_js)handleOnTagWritten, &handleOnTagWrittenTSF);
+  nodei = new NodeInterface();
 
   napi_create_threadsafe_function(
-          env, //napi_env env,
-          emit, //napi_value func,
-          NULL, // napi_value async_resource,
-          Napi::String::New(env, "onError"), //napi_value async_resource_name,
-          0, // size_t max_queue_size,
-          1, //size_t initial_thread_count,
-          NULL, // void* thread_finalize_data,
-          NULL, // napi_finalize thread_finalize_cb,
-          NULL, // void* context,
-          (napi_threadsafe_function_call_js)handleOnError, // napi_threadsafe_function_call_js call_js_cb,
-          &handleOnErrorTSF); // napi_threadsafe_function* result);
+    env, emit, NULL, Napi::String::New(env, "onTagArrived"), 0, 1, NULL, NULL, NULL,
+    (napi_threadsafe_function_call_js)handleOnTagArrived, &handleOnTagArrivedTSF
+  );
+
+  napi_create_threadsafe_function(
+    env, emit, NULL, Napi::String::New(env, "onTagDeparted"), 0, 1, NULL, NULL, NULL,
+    (napi_threadsafe_function_call_js)handleOnTagDeparted, &handleOnTagDepartedTSF
+  );
+
+  napi_create_threadsafe_function(
+    env, emit, NULL, Napi::String::New(env, "onTagWritten"), 0, 1, NULL, NULL, NULL,
+    (napi_threadsafe_function_call_js)handleOnTagWritten, &handleOnTagWrittenTSF
+  );
+
+  napi_create_threadsafe_function(
+    env, emit, NULL, Napi::String::New(env, "onError"), 0, 1, NULL, NULL, NULL,
+    (napi_threadsafe_function_call_js)handleOnError, &handleOnErrorTSF
+  );
   
   pthread_create(&listenThread, NULL, runListenThread, NULL);
 
   Napi::Object context = Napi::Object::New(env);
 
-  auto write = std::bind(&NodeInterface::write, nodei, std::placeholders::_1);
+  auto setWrite = std::bind(&NodeInterface::setWrite, nodei, std::placeholders::_1);
+  context.Set("setWrite", Napi::Function::New(env, setWrite));
 
-  context.Set("write", Napi::Function::New(env, write));
+  auto clearWrite = std::bind(&NodeInterface::clearWrite, nodei, std::placeholders::_1);
+  context.Set("clearWrite", Napi::Function::New(env, clearWrite));
+
+  auto getWrite = std::bind(&NodeInterface::getWrite, nodei, std::placeholders::_1);
+  context.Set("getWrite", Napi::Function::New(env, getWrite));
+
+  auto immediateWrite = std::bind(&NodeInterface::immediateWrite, nodei, std::placeholders::_1);
+  context.Set("immediateWrite", Napi::Function::New(env, immediateWrite));
 
   return context;
 }

@@ -4,18 +4,52 @@ const debug = process.env.NODE_DEBUG && process.env.NODE_DEBUG.includes('node_nf
 
 const native_nci = require(`./build/${debug ? 'Debug' : 'Release'}/node_nfc_nci`);
 
-class NCIListener {
+class NCIListener extends EventEmitter {
     constructor() {
+        super();
+
         this.emitter = new EventEmitter();
         this.context = null;
+
+        this.emitter.on("arrived", tag => {
+           tag.write = this.context.immediateWrite;
+
+           this.emit("arrived", tag);
+        });
+
+        this.emitter.on("error", error => {
+           this.emit("error", error);
+        });
+
+        this.emitter.on("departed", tag => {
+           this.emit("departed", tag);
+        });
+
+        this.emitter.on("written", (tag, previous) => {
+           this.emit("written", tag, previous);
+        });
     }
 
-    on(event, handler) {
-        this.emitter.on(event, handler);
+    setWrite(type, content) {
+        this.context.setWrite({ type, content });
     }
 
-    write(type, content) {
-        this.context.write({ type, content });
+    clearWrite() {
+        this.context.clearWrite();
+    }
+
+    hasWrite() {
+        const ndef = this.context.getWrite();
+
+        if (ndef) {
+            return true;
+        }
+
+        return false;
+    }
+
+    getWrite() {
+        return this.context.getWrite();
     }
 
     listen(cb) {
