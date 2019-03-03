@@ -73,12 +73,10 @@ void TagManager::immediateWrite(Tag::TagNDEF* ndef, bool needsLock) {
   }
 }
 
-void TagManager::setWrite(Tag::TagNDEF* ndef) {
+void TagManager::setNextWrite(Tag::TagNDEF* ndef) {
   Device::mutex.Lock();
 
-  if (!hasNextWriteNDEF) {
-    immediateWrite(ndef, false);
-  } else {
+  if (Device::state == Device::State::WAITING) {
     nextWriteNDEF = ndef;
     hasNextWriteNDEF = true;
   }
@@ -86,11 +84,11 @@ void TagManager::setWrite(Tag::TagNDEF* ndef) {
   Device::mutex.Unlock();
 }
 
-bool TagManager::hasWrite() {
+bool TagManager::hasNextWrite() {
   return hasNextWriteNDEF;
 }
 
-void TagManager::clearWrite() {
+void TagManager::clearNextWrite() {
   Device::mutex.Lock();
 
   nextWriteNDEF = nullptr;

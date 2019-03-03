@@ -30,16 +30,16 @@ class NCIListener extends EventEmitter {
         });
     }
 
-    setWrite(type, content) {
-        this.context.setWrite({ type, content });
+    setNextWrite(type, content) {
+        this.context.setNextWrite({ type, content });
     }
 
-    clearWrite() {
-        this.context.clearWrite();
+    clearNextWrite() {
+        this.context.clearNextWrite();
     }
 
-    hasWrite() {
-        return this.context.hasWrite();
+    hasNextWrite() {
+        return this.context.hasNextWrite();
     }
 
     listen(cb) {

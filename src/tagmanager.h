@@ -35,9 +35,9 @@ public:
   void onTagDeparture(void);
 
   void immediateWrite(Tag::TagNDEF* ndef, bool needsLock);
-  void setWrite(Tag::TagNDEF* ndef);
-  bool hasWrite();
-  void clearWrite();
+  void setNextWrite(Tag::TagNDEF* ndef);
+  bool hasNextWrite();
+  void clearNextWrite();
 
   void onDeviceArrival(void);
   void onDeviceDeparture(void);

@@ -6,7 +6,7 @@ nci.listen(context => {
     context.on("arrived", tag => {
         console.log(`ARRIVED: ${JSON.stringify(tag)}`);
 
-        if (!context.hasWrite()) {
+        if (!context.hasNextWrite()) {
             if (tag.uid.id === "04:e1:5f:d2:9c:39:80") {
                 tag.write("Text", "hello world");
             }
@@ -21,6 +21,6 @@ nci.listen(context => {
     context.on("departed", tag => {
         console.log(`DEPARTED: ${JSON.stringify(tag)}`);
 
-        context.setWrite("Text", "blarg");
+        context.setNextWrite("Text", "blarg");
     });
 });

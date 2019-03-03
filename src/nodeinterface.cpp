@@ -78,7 +78,7 @@ static void handleOnTagWritten(Napi::Env env, napi_value func, void* context, vo
   napi_call_function(env, undefined, func, 3, argv, NULL);
 }
 
-void NodeInterface::setWrite(const Napi::CallbackInfo& info) {
+void NodeInterface::setNextWrite(const Napi::CallbackInfo& info) {
   Napi::Object arg = info[0].As<Napi::Object>();
 
   Tag::TagNDEF* ndef = new Tag::TagNDEF();
@@ -86,7 +86,7 @@ void NodeInterface::setWrite(const Napi::CallbackInfo& info) {
   ndef->type = (std::string)arg.Get("type").As<Napi::String>();
   ndef->content = (std::string)arg.Get("content").As<Napi::String>();
 
-  TagManager::getInstance().setWrite(ndef);
+  TagManager::getInstance().setNextWrite(ndef);
 }
 
 void NodeInterface::immediateWrite(const Napi::CallbackInfo &info) {
@@ -100,12 +100,12 @@ void NodeInterface::immediateWrite(const Napi::CallbackInfo &info) {
   TagManager::getInstance().immediateWrite(ndef, true);
 }
 
-void NodeInterface::clearWrite(const Napi::CallbackInfo &info) {
-  TagManager::getInstance().clearWrite();
+void NodeInterface::clearNextWrite(const Napi::CallbackInfo &info) {
+  TagManager::getInstance().clearNextWrite();
 }
 
-Napi::Boolean NodeInterface::hasWrite(const Napi::CallbackInfo &info) {
-  auto has = TagManager::getInstance().hasWrite();
+Napi::Boolean NodeInterface::hasNextWrite(const Napi::CallbackInfo &info) {
+  auto has = TagManager::getInstance().hasNextWrite();
 
   Napi::Env env = info.Env();
 
@@ -179,14 +179,14 @@ Napi::Object listen(const Napi::CallbackInfo& info) {
 
   Napi::Object context = Napi::Object::New(env);
 
-  auto setWrite = std::bind(&NodeInterface::setWrite, nodei, std::placeholders::_1);
-  context.Set("setWrite", Napi::Function::New(env, setWrite));
+  auto setNextWrite = std::bind(&NodeInterface::setNextWrite, nodei, std::placeholders::_1);
+  context.Set("setNextWrite", Napi::Function::New(env, setNextWrite));
 
-  auto clearWrite = std::bind(&NodeInterface::clearWrite, nodei, std::placeholders::_1);
-  context.Set("clearWrite", Napi::Function::New(env, clearWrite));
+  auto clearNextWrite = std::bind(&NodeInterface::clearNextWrite, nodei, std::placeholders::_1);
+  context.Set("clearNextWrite", Napi::Function::New(env, clearNextWrite));
 
-  auto hasWrite = std::bind(&NodeInterface::hasWrite, nodei, std::placeholders::_1);
-  context.Set("hasWrite", Napi::Function::New(env, hasWrite));
+  auto hasNextWrite = std::bind(&NodeInterface::hasNextWrite, nodei, std::placeholders::_1);
+  context.Set("hasNextWrite", Napi::Function::New(env, hasNextWrite));
 
   auto immediateWrite = std::bind(&NodeInterface::immediateWrite, nodei, std::placeholders::_1);
   context.Set("immediateWrite", Napi::Function::New(env, immediateWrite));
