@@ -252,7 +252,9 @@ namespace Tag {
     unsigned int size = (unsigned int)(strlen(text) + strlen(lang) + 30); // TODO : replace 30 by TEXT NDEF message header
 
     len = &size;
-    *buffer = (unsigned char*) malloc(*len * sizeof(unsigned char));
+    unsigned char* buf = (unsigned char*) malloc(*len * sizeof(unsigned char));
+
+    buffer = &buf;
 
     wndef->length = *len;
     wndef->size = *len;
