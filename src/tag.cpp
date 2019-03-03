@@ -246,22 +246,19 @@ namespace Tag {
 
     char* text = (char*)ndef->content.c_str();
     char* lang = (char*)"en";
-    unsigned int* len;
     unsigned char** buffer;
 
     unsigned int size = (unsigned int)(strlen(text) + strlen(lang) + 30); // TODO : replace 30 by TEXT NDEF message header
-
-    len = &size;
-    unsigned char* buf = (unsigned char*) malloc(*len * sizeof(unsigned char));
+    unsigned char* buf = (unsigned char*) malloc(size * sizeof(unsigned char));
 
     buffer = &buf;
 
-    wndef->length = *len;
-    wndef->size = *len;
+    wndef->length = size;
+    wndef->size = size;
     wndef->read = 0;
     wndef->writeable = false;
 
-    int res = ndef_createText(lang, text, *buffer, *len);
+    int res = ndef_createText(lang, text, *buffer, size);
 
     if (res <= 0x00) { // failed
       return wndef;
@@ -270,7 +267,7 @@ namespace Tag {
     wndef->length = (unsigned int)res;
     wndef->size = (unsigned int)res;
 
-    res = nfcTag_writeNdef(tagInfo->handle, *buffer, *len);
+    res = nfcTag_writeNdef(tagInfo->handle, *buffer, (unsigned int)res);
 
     if (res == 0x00) {
       wndef->content = ndef->content;
