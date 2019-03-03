@@ -16,6 +16,7 @@ napi_threadsafe_function handleOnErrorTSF;
 std::string errorMessage;
 Tag::Tag* arrivedTag;
 Tag::Tag* writtenTag;
+Tag::Tag* currentTag;
 
 NodeInterface::NodeInterface() { }
 
@@ -43,6 +44,7 @@ static void handleOnError(Napi::Env env, napi_value func, void* context, void* d
 
 void NodeInterface::onTagArrived(Tag::Tag* tag) {
   arrivedTag = tag;
+  currentTag = tag;
 
   napi_call_threadsafe_function(handleOnTagArrivedTSF, &arrivedTag, napi_tsfn_nonblocking);
 }
@@ -60,6 +62,7 @@ static void handleOnTagArrived(Napi::Env env, napi_value func, void* context, vo
 
 void NodeInterface::onTagWritten(Tag::Tag* tag) {
   writtenTag = tag;
+  currentTag = tag;
 
   napi_call_threadsafe_function(handleOnTagWrittenTSF, &writtenTag, napi_tsfn_nonblocking);
 }
@@ -117,8 +120,8 @@ void NodeInterface::onTagDeparted() {
 }
 
 static void handleOnTagDeparted(Napi::Env env, napi_value func, void* context, void* data) {
-  Napi::Object tagInfo = TagSerialize::Tag(&env, arrivedTag);
-  tagInfo.Set("ndef", TagSerialize::NDEF(&env, arrivedTag->ndef));
+  Napi::Object tagInfo = TagSerialize::Tag(&env, currentTag);
+  tagInfo.Set("ndef", TagSerialize::NDEF(&env, currentTag->ndef));
 
   napi_value argv[2] = { Napi::String::New(env, "departed"), tagInfo };
 
