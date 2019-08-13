@@ -4,7 +4,7 @@
 
 cmake
 
-`sudo apt install -y cmake automake autoconf libtool`
+`sudo apt install -y cmake automake autoconf libtool pkg-config`
 
 linux_libnfc-nci - https://github.com/NXPNFCLinux/linux_libnfc-nci
 
