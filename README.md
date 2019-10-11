@@ -13,7 +13,7 @@ linux_libnfc-nci - https://github.com/NXPNFCLinux/linux_libnfc-nci
 `./bootstrap`
 
 
-`./configure --enable-i2c`
+`./configure --enable-alt`
 
 `make`
 
