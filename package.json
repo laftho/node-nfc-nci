@@ -10,11 +10,14 @@
     "rebuild": "cmake-js clean && cmake-js compile",
     "rebuild:debug": "cmake-js -D clean && cmake-js -D compile"
   },
+  "binary": {
+      "napi_versions": 4
+  },
   "author": "Thomas LaFreniere",
   "license": "ISC",
   "dependencies": {
-    "cmake-js": "^5.1.0",
-    "node-addon-api": "^1.6.2"
+    "cmake-js": "^7.2.1",
+    "node-addon-api": "^6.1.0"
   },
   "cmake-js": {
     "runtime": "node",
